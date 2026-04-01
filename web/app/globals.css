@@ -1,26 +1,142 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 150 10% 96%;
+    --foreground: 200 20% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 200 20% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 20% 12%;
+
+    --primary: 160 60% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 150 15% 93%;
+    --secondary-foreground: 200 20% 12%;
+
+    --muted: 150 10% 94%;
+    --muted-foreground: 200 10% 50%;
+
+    --accent: 150 15% 93%;
+    --accent-foreground: 200 20% 12%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 150 10% 90%;
+    --input: 150 10% 90%;
+    --ring: 160 60% 42%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 200 20% 12%;
+    --sidebar-primary: 160 60% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 160 50% 95%;
+    --sidebar-accent-foreground: 160 60% 30%;
+    --sidebar-border: 150 10% 92%;
+    --sidebar-ring: 160 60% 42%;
+
+    /* Custom tokens */
+    --success: 160 60% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    --surface: 150 10% 97%;
+
+    /* Shadows */
+    --shadow-card: 0 2px 16px -2px hsl(200 20% 12% / 0.06);
+    --shadow-card-hover: 0 4px 24px -4px hsl(200 20% 12% / 0.1);
+    --shadow-fab: 0 6px 24px -4px hsl(160 60% 42% / 0.35);
+  }
+
+  .dark {
+    --background: 200 20% 7%;
+    --foreground: 150 10% 95%;
+    --card: 200 18% 10%;
+    --card-foreground: 150 10% 95%;
+    --popover: 200 18% 10%;
+    --popover-foreground: 150 10% 95%;
+    --primary: 160 55% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 200 15% 15%;
+    --secondary-foreground: 150 10% 95%;
+    --muted: 200 15% 15%;
+    --muted-foreground: 200 10% 55%;
+    --accent: 200 15% 15%;
+    --accent-foreground: 150 10% 95%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 150 10% 95%;
+    --border: 200 15% 16%;
+    --input: 200 15% 16%;
+    --ring: 160 55% 45%;
+    --sidebar-background: 200 18% 10%;
+    --sidebar-foreground: 150 10% 95%;
+    --sidebar-primary: 160 55% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 200 15% 15%;
+    --sidebar-accent-foreground: 150 10% 95%;
+    --sidebar-border: 200 15% 16%;
+    --sidebar-ring: 160 55% 45%;
+    --success: 160 55% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --surface: 200 18% 10%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+    font-weight: 700;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-card-hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+  .shadow-fab {
+    box-shadow: var(--shadow-fab);
+  }
 }
