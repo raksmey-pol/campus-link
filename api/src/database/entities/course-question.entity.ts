@@ -13,38 +13,38 @@ import { User } from './user.entity';
 @Entity('course_questions')
 export class CourseQuestion {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'course_id' })
-  course: Course;
+  course!: Course;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ length: 300 })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text' })
-  body: string;
+  body!: string;
 
   @Column({ default: 0 })
-  view_count: number;
+  view_count!: number;
 
   @Column({ default: 0 })
-  answer_count: number;
+  answer_count!: number;
 
   // Only MENTOR or MODERATOR can pin
   @Column({ default: false })
-  is_pinned: boolean;
+  is_pinned!: boolean;
 
   @Column({ default: false })
-  is_closed: boolean;
+  is_closed!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

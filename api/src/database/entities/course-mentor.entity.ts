@@ -14,19 +14,19 @@ import { User } from './user.entity';
 @Index('UQ_course_mentor_user', ['course', 'user'], { unique: true })
 export class CourseMentor {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'course_id' })
-  course: Course;
+  course!: Course;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  earned_at: Date;
+  earned_at!: Date;
 
   @Column({ default: 0 })
-  total_contributions: number;
+  total_contributions!: number;
 }

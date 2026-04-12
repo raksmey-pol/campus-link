@@ -13,32 +13,32 @@ import { User } from './user.entity';
 @Entity('claims')
 export class Claim {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Item, { nullable: false })
   @JoinColumn({ name: 'item_id' })
-  item: Item;
+  item!: Item;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'claimer_id' })
-  claimer: User;
+  claimer!: User;
 
   @Column({ type: 'text' })
-  proof_description: string;
+  proof_description!: string;
 
   @Column({ type: 'enum', enum: ClaimStatus, default: ClaimStatus.PENDING })
-  status: ClaimStatus;
+  status!: ClaimStatus;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'moderator_id' })
-  moderator: User | null;
+  moderator!: User | null;
 
   @Column({ type: 'text', nullable: true })
-  rejection_reason: string | null;
+  rejection_reason!: string | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  reviewed_at: Date | null;
+  reviewed_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

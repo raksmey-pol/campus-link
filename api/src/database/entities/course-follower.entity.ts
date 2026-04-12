@@ -13,16 +13,16 @@ import { User } from './user.entity';
 @Index('UQ_course_follower_user', ['course', 'user'], { unique: true })
 export class CourseFollower {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'course_id' })
-  course: Course;
+  course!: Course;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

@@ -13,29 +13,29 @@ import { User } from './user.entity';
 @Entity('course_answers')
 export class CourseAnswer {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => CourseQuestion, { nullable: false })
   @JoinColumn({ name: 'question_id' })
-  question: CourseQuestion;
+  question!: CourseQuestion;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'text' })
-  body: string;
+  body!: string;
 
   @Column({ default: 0 })
-  upvotes: number;
+  upvotes!: number;
 
   // Only the question author can accept an answer
   @Column({ default: false })
-  is_accepted: boolean;
+  is_accepted!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

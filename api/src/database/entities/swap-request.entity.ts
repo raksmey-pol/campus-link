@@ -21,47 +21,47 @@ import { User } from './user.entity';
 @Entity('swap_requests')
 export class SwapRequest {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'requester_id' })
-  requester: User;
+  requester!: User;
 
   @Column({ type: 'enum', enum: SwapType })
-  swap_type: SwapType;
+  swap_type!: SwapType;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'current_course_id' })
-  current_course: Course;
+  current_course!: Course;
 
   // e.g. A, B, C — NULL means course-level swap
-  @Column({ length: 10, nullable: true })
-  current_section: string | null;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  current_section!: string | null;
 
   // Same as current for section swap; different for course swap
   @ManyToOne(() => Course, { nullable: true })
   @JoinColumn({ name: 'desired_course_id' })
-  desired_course: Course | null;
+  desired_course!: Course | null;
 
   // NULL means any section is acceptable
-  @Column({ length: 10, nullable: true })
-  desired_section: string | null;
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  desired_section!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  notes: string | null;
+  notes!: string | null;
 
   @Column({ type: 'enum', enum: SwapStatus, default: SwapStatus.OPEN })
-  status: SwapStatus;
+  status!: SwapStatus;
 
   @Column({ type: 'timestamptz' })
-  expires_at: Date;
+  expires_at!: Date;
 
   @Column({ type: 'timestamptz', nullable: true })
-  cooldown_until: Date | null;
+  cooldown_until!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

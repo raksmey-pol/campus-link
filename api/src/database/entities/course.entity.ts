@@ -9,48 +9,48 @@ import {
 @Entity('courses')
 export class Course {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ unique: true, length: 20 })
-  code: string;
+  code!: string;
 
   @Column({ length: 200 })
-  title: string;
+  title!: string;
 
   @Column()
-  credits: number;
+  credits!: number;
 
   @Column({ length: 100 })
-  department: string;
+  department!: string;
 
   @Column({ type: 'text', nullable: true })
-  prerequisites: string | null;
+  prerequisites!: string | null;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   // Precomputed aggregate scores (1.00–5.00)
   @Column({ type: 'numeric', precision: 3, scale: 2, default: 0 })
-  avg_difficulty: number;
+  avg_difficulty!: number;
 
   @Column({ type: 'numeric', precision: 4, scale: 1, default: 0 })
-  avg_workload: number;
+  avg_workload!: number;
 
   @Column({ type: 'numeric', precision: 3, scale: 2, default: 0 })
-  avg_quality: number;
+  avg_quality!: number;
 
   @Column({ type: 'numeric', precision: 3, scale: 2, default: 0 })
-  avg_usefulness: number;
+  avg_usefulness!: number;
 
   @Column({ type: 'numeric', precision: 3, scale: 2, default: 0 })
-  avg_recommendation: number;
+  avg_recommendation!: number;
 
   @Column({ default: 0 })
-  review_count: number;
+  review_count!: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

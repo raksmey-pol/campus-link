@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -18,11 +19,14 @@ import { AppService } from './app.service';
         password: config.get<string>('DB_PASS', 'postgres'),
         database: config.get<string>('DB_NAME', 'campuslink'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        // Auto-sync schema in dev — switch to migrations before production
-        synchronize: config.get<string>('NODE_ENV') !== 'production',
+        migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
+        migrationsRun:
+          config.get<string>('DB_MIGRATIONS_RUN', 'false') === 'true',
+        synchronize: config.get<string>('DB_SYNC', 'false') === 'true',
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

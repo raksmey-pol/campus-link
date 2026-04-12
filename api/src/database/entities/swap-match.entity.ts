@@ -13,30 +13,30 @@ import { SwapRequest } from './swap-request.entity';
 @Entity('swap_matches')
 export class SwapMatch {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => SwapRequest, { nullable: false })
   @JoinColumn({ name: 'request_a_id' })
-  requestA: SwapRequest;
+  requestA!: SwapRequest;
 
   @ManyToOne(() => SwapRequest, { nullable: false })
   @JoinColumn({ name: 'request_b_id' })
-  requestB: SwapRequest;
+  requestB!: SwapRequest;
 
   // Only populated for CHAIN (3-way) matches
   @ManyToOne(() => SwapRequest, { nullable: true })
   @JoinColumn({ name: 'request_c_id' })
-  requestC: SwapRequest | null;
+  requestC!: SwapRequest | null;
 
   @Column({ type: 'enum', enum: MatchType })
-  match_type: MatchType;
+  match_type!: MatchType;
 
   @Column({ type: 'enum', enum: MatchStatus, default: MatchStatus.PROPOSED })
-  status: MatchStatus;
+  status!: MatchStatus;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }
