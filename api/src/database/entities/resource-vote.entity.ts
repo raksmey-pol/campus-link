@@ -15,19 +15,19 @@ import { User } from './user.entity';
 @Index('UQ_resource_vote_user', ['resource', 'user'], { unique: true })
 export class ResourceVote {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => CourseResource, { nullable: false })
   @JoinColumn({ name: 'resource_id' })
-  resource: CourseResource;
+  resource!: CourseResource;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'enum', enum: VoteValue })
-  vote: VoteValue;
+  vote!: VoteValue;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

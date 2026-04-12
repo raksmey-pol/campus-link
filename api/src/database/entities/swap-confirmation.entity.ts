@@ -13,16 +13,16 @@ import { User } from './user.entity';
 @Index('UQ_swap_confirmation_user', ['match', 'user'], { unique: true })
 export class SwapConfirmation {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => SwapMatch, { nullable: false })
   @JoinColumn({ name: 'match_id' })
-  match: SwapMatch;
+  match!: SwapMatch;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  confirmed_at: Date;
+  confirmed_at!: Date;
 }

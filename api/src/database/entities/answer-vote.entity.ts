@@ -13,16 +13,16 @@ import { User } from './user.entity';
 @Index('UQ_answer_vote_user', ['answer', 'user'], { unique: true })
 export class AnswerVote {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => CourseAnswer, { nullable: false })
   @JoinColumn({ name: 'answer_id' })
-  answer: CourseAnswer;
+  answer!: CourseAnswer;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

@@ -16,46 +16,46 @@ import { User } from './user.entity';
 @Index('UQ_course_review_user', ['course', 'user'], { unique: true })
 export class CourseReview {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'course_id' })
-  course: Course;
+  course!: Course;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column()
-  difficulty: number;
+  difficulty!: number;
 
   @Column({ type: 'numeric', precision: 4, scale: 1 })
-  workload_hours: number;
+  workload_hours!: number;
 
   @Column()
-  quality: number;
+  quality!: number;
 
   @Column()
-  usefulness: number;
+  usefulness!: number;
 
   @Column()
-  recommendation: number;
+  recommendation!: number;
 
   @Column({ type: 'text', nullable: true })
-  review_text: string | null;
+  review_text!: string | null;
 
   @Column({ default: false })
-  is_anonymous: boolean;
+  is_anonymous!: boolean;
 
   @Column({ default: 0 })
-  helpfulness_votes: number;
+  helpfulness_votes!: number;
 
   @Column({ type: 'enum', enum: ReviewStatus, default: ReviewStatus.PENDING })
-  status: ReviewStatus;
+  status!: ReviewStatus;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updated_at!: Date;
 }

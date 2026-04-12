@@ -12,25 +12,25 @@ import { User } from './user.entity';
 @Entity('point_transactions')
 export class PointTransaction {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column()
-  amount: number;
+  amount!: number;
 
   @Column({ type: 'enum', enum: PointType })
-  type: PointType;
+  type!: PointType;
 
   // Polymorphic reference — not a typed TypeORM relation
-  @Column({ nullable: true })
-  reference_id: number | null;
+  @Column({ type: 'integer', nullable: true })
+  reference_id!: number | null;
 
-  @Column({ length: 50, nullable: true })
-  reference_type: string | null;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  reference_type!: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

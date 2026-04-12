@@ -14,19 +14,19 @@ import { User } from './user.entity';
 @Index('UQ_review_vote_user', ['review', 'user'], { unique: true })
 export class ReviewVote {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => CourseReview, { nullable: false })
   @JoinColumn({ name: 'review_id' })
-  review: CourseReview;
+  review!: CourseReview;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column()
-  is_helpful: boolean;
+  is_helpful!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }

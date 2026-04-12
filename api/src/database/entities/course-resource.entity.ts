@@ -13,46 +13,46 @@ import { User } from './user.entity';
 @Entity('course_resources')
 export class CourseResource {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Course, { nullable: false })
   @JoinColumn({ name: 'course_id' })
-  course: Course;
+  course!: Course;
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
   @Column({ type: 'enum', enum: ResourceType })
-  type: ResourceType;
+  type!: ResourceType;
 
   @Column({ length: 200 })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null;
+  description!: string | null;
 
   // S3/MinIO URL — for uploaded files (Notes, Assessments, Projects)
   @Column({ type: 'text', nullable: true })
-  file_url: string | null;
+  file_url!: string | null;
 
   // External URL — for EXTERNAL_LINK type
   @Column({ type: 'text', nullable: true })
-  link_url: string | null;
+  link_url!: string | null;
 
   @Column({ default: 0 })
-  upvotes: number;
+  upvotes!: number;
 
   @Column({ default: 0 })
-  downvotes: number;
+  downvotes!: number;
 
   @Column({
     type: 'enum',
     enum: ResourceStatus,
     default: ResourceStatus.PENDING,
   })
-  status: ResourceStatus;
+  status!: ResourceStatus;
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  created_at!: Date;
 }
