@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { StorageModule } from './common/storage/storage.module';
+import { LostFoundModule } from './lost-found/lost-found.module';
 
 @Module({
   imports: [
@@ -26,7 +28,9 @@ import { AuthModule } from './auth/auth.module';
         logging: config.get<string>('NODE_ENV') === 'development',
       }),
     }),
+    StorageModule,
     AuthModule,
+    LostFoundModule,
   ],
   controllers: [AppController],
   providers: [AppService],
