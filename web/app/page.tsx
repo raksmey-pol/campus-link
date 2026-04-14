@@ -188,7 +188,7 @@ export default function Dashboard() {
         {role === "student" && (
           <div className="rounded-2xl bg-card shadow-card overflow-hidden">
             <div className="flex items-center justify-between p-4 pb-2">
-              <h2 className="text-sm font-semibold text-foreground">Today's Schedule</h2>
+              <h2 className="text-sm font-semibold text-foreground">Today&apos;s Schedule</h2>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>{today.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
