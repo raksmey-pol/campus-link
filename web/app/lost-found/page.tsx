@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import {
@@ -29,49 +30,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-
-import waterBottleImg from "@/assets/lost-items/water-bottle.jpg";
-import airpodsImg from "@/assets/lost-items/airpods.jpg";
-import idCardImg from "@/assets/lost-items/id-card.jpg";
-import laptopChargerImg from "@/assets/lost-items/laptop-charger.jpg";
-import carKeysImg from "@/assets/lost-items/car-keys.jpg";
-import umbrellaImg from "@/assets/lost-items/umbrella.jpg";
-
-type ItemStatus = "PENDING" | "APPROVED" | "CLAIMED" | "RESOLVED";
-
-interface LostItem {
-  id: number;
-  title: string;
-  description: string;
-  location: string;
-  valueTier: string;
-  status: ItemStatus;
-  reportedBy: string;
-  createdAt: string;
-  photoUrl: typeof waterBottleImg;
-}
-
-const mockItems: LostItem[] = [
-  { id: 1, title: "Blue Hydro Flask Water Bottle", description: "Found near the library entrance, 2nd floor. Has stickers on it.", location: "Library 2F", valueTier: "LOW", status: "APPROVED", reportedBy: "Lyhour H.", createdAt: "2 hours ago", photoUrl: waterBottleImg },
-  { id: 2, title: "AirPods Pro with Case", description: "White AirPods Pro found on a desk in the cafeteria.", location: "Cafeteria", valueTier: "HIGH", status: "PENDING", reportedBy: "Raksmey P.", createdAt: "4 hours ago", photoUrl: airpodsImg },
-  { id: 3, title: "Student ID Card — Kimhong R.", description: "Found a student ID card on the ground floor hallway.", location: "Building A, Ground Floor", valueTier: "MEDIUM", status: "CLAIMED", reportedBy: "Virakyuth S.", createdAt: "1 day ago", photoUrl: idCardImg },
-  { id: 4, title: "HP Laptop Charger", description: "Black HP laptop charger left in Room 204 after class.", location: "Room 204", valueTier: "MEDIUM", status: "APPROVED", reportedBy: "Sovanrith S.", createdAt: "1 day ago", photoUrl: laptopChargerImg },
-  { id: 5, title: "Car Keys with Toyota Keychain", description: "Found car keys in the parking lot near Gate 2.", location: "Parking Lot B", valueTier: "VERY_HIGH", status: "RESOLVED", reportedBy: "Kimheng C.", createdAt: "3 days ago", photoUrl: carKeysImg },
-  { id: 6, title: "Blue Umbrella", description: "Left behind in the auditorium after the morning lecture.", location: "Auditorium", valueTier: "LOW", status: "APPROVED", reportedBy: "Pochhay E.", createdAt: "3 days ago", photoUrl: umbrellaImg },
-];
+import { mockItems, type ItemStatus } from "./data";
 
 const statusConfig: Record<ItemStatus, { label: string; className: string }> = {
   PENDING: { label: "Pending", className: "bg-warning/10 text-warning" },
   APPROVED: { label: "Approved", className: "bg-success/10 text-success" },
   CLAIMED: { label: "Claimed", className: "bg-info/10 text-info" },
   RESOLVED: { label: "Resolved", className: "bg-muted text-muted-foreground" },
-};
-
-const valueTierLabel: Record<string, string> = {
-  LOW: "Low Value (+10 pts)",
-  MEDIUM: "Medium (+25 pts)",
-  HIGH: "High (+50 pts)",
-  VERY_HIGH: "Very High (+100 pts)",
 };
 
 export default function LostFound() {
@@ -189,7 +154,8 @@ export default function LostFound() {
               key={item.id}
               className="rounded-2xl bg-card shadow-card overflow-hidden transition-all hover:shadow-card-hover"
             >
-              <div className="flex gap-3 p-3">
+              <Link href={`/lost-found/${item.id}`} className="block">
+                <div className="flex gap-3 p-3">
                 {/* Photo */}
                 <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
                   <Image
@@ -222,13 +188,16 @@ export default function LostFound() {
                     </span>
                   </div>
                 </div>
-              </div>
+                </div>
+              </Link>
 
               {item.status === "APPROVED" && (
                 <div className="px-3 pb-3">
-                  <Button variant="outline" size="sm" className="w-full text-xs h-9 rounded-xl border-primary/20 text-primary hover:bg-primary/5">
-                    Claim This Item
-                  </Button>
+                  <Link href={`/lost-found/${item.id}`} className="block">
+                    <Button variant="outline" size="sm" className="w-full text-xs h-9 rounded-xl border-primary/20 text-primary hover:bg-primary/5">
+                      Claim This Item
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>

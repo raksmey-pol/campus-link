@@ -15,9 +15,10 @@ export class Item {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @ManyToOne(() => User, { nullable: false })
+  // Nullable to support guest (unauthenticated) found-item submissions
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'reporter_id' })
-  reporter!: User;
+  reporter!: User | null;
 
   @Column({ length: 200 })
   title!: string;
@@ -47,6 +48,13 @@ export class Item {
 
   @Column({ type: 'timestamptz', nullable: true })
   resolved_at!: Date | null;
+
+  // Resolve handoff confirmation flags — both must be true to mark item RESOLVED
+  @Column({ default: false })
+  finder_confirmed!: boolean;
+
+  @Column({ default: false })
+  claimer_confirmed!: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
