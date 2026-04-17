@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,12 +23,15 @@ import { CreateClaimDto } from './dto/create-claim.dto';
 import { ListItemsDto } from './dto/list-items.dto';
 import { UpdateClaimStatusDto } from './dto/update-claim-status.dto';
 import { UpdateItemStatusDto } from './dto/update-item-status.dto';
+import { TelegramAnnouncementService } from './notifications/telegram-announcement.service';
 
 /** Owner (claimer) trust points after successful handoff */
 const OWNER_TRUST_POINTS = 5;
 
 @Injectable()
 export class LostFoundService {
+  private readonly logger = new Logger(LostFoundService.name);
+
   constructor(
     @InjectRepository(Item)
     private readonly itemsRepo: Repository<Item>,
@@ -38,6 +42,7 @@ export class LostFoundService {
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
     private readonly dataSource: DataSource,
+    private readonly telegramAnnouncementService: TelegramAnnouncementService,
   ) {}
 
   // ==================================== Public listing =====================================
@@ -347,6 +352,11 @@ export class LostFoundService {
       await this.claimsRepo.save(claim);
     }
 
+    if (dto.status === ClaimStatus.APPROVED) {
+      // Fire-and-forget Telegram announcement — failure must not affect claim moderation
+      void this.announceClaimerFoundToTelegram(claim.item, claim);
+    }
+
     return {
       id: claim.id,
       item: {
@@ -404,7 +414,7 @@ export class LostFoundService {
 
     if (dto.status === ItemStatus.APPROVED) {
       // Fire-and-forget Telegram broadcast — failure must not affect the response
-      void this.broadcastItemToTelegram(saved);
+      void this.announceApprovedItemToTelegram(saved);
     }
 
     return saved;
@@ -653,17 +663,41 @@ export class LostFoundService {
     }
   }
 
-  /**
-   * Placeholder for the Telegram broadcast integration.
-   * In production, this sends the item card to the campus Telegram channel
-   * and persists the returned message_id for idempotency.
-   */
-  private broadcastItemToTelegram(item: Item): void {
-    // TODO: integrate with Telegram Bot API
-    // const messageId = await this.telegramService.sendItemCard(item);
-    // await this.itemsRepo.update(item.id, { telegram_message_id: String(messageId) });
-    console.log(
-      `[Telegram] Broadcast queued for approved item #${item.id}: "${item.title}"`,
-    );
+  private async announceApprovedItemToTelegram(item: Item): Promise<void> {
+    if (item.telegram_message_id) {
+      return;
+    }
+
+    try {
+      const messageId =
+        await this.telegramAnnouncementService.announceItemAdded(item);
+
+      if (!messageId) {
+        return;
+      }
+
+      await this.itemsRepo.update(item.id, { telegram_message_id: messageId });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown announcement error';
+      this.logger.warn(
+        `Failed to announce approved item #${item.id} to Telegram: ${message}`,
+      );
+    }
+  }
+
+  private async announceClaimerFoundToTelegram(
+    item: Item,
+    claim: Claim,
+  ): Promise<void> {
+    try {
+      await this.telegramAnnouncementService.announceClaimerFound(item, claim);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown announcement error';
+      this.logger.warn(
+        `Failed to announce claimer for item #${item.id} to Telegram: ${message}`,
+      );
+    }
   }
 }
