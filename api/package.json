@@ -24,7 +24,8 @@
     "db:migrate": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
     "db:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
     "db:show": "typeorm-ts-node-commonjs migration:show -d src/database/data-source.ts",
-    "db:seed:users": "node -r ts-node/register -r tsconfig-paths/register src/database/seeds/seed-users.ts"
+    "db:seed:users": "node -r ts-node/register -r tsconfig-paths/register src/database/seeds/seed-users.ts",
+    "db:seed:lost-found": "node -r ts-node/register -r tsconfig-paths/register src/database/seeds/seed-lost-found.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1030.0",

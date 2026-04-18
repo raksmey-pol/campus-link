@@ -122,6 +122,10 @@ See [.env.example](.env.example).
   - Seeds local accounts (1 ADMIN + 2 USER) using values from .env.
   - The script is idempotent by email and will update existing seeded accounts.
 
+- pnpm run db:seed:lost-found
+  - Seeds sample Lost & Found items (and sample claims) for local testing.
+  - The script is idempotent by internal seed key and will update existing seeded rows.
+
 ## Auth Endpoints
 
 Base path: /auth

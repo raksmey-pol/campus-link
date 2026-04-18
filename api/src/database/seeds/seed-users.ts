@@ -14,26 +14,47 @@ type SeedUser = {
   password: string;
 };
 
-const defaultPassword = process.env.SEED_DEFAULT_PASSWORD ?? 'ChangeMe123!';
+function optionalEnvValue(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return value === '' ? undefined : value;
+}
+
+const defaultPassword =
+  optionalEnvValue(process.env.SEED_DEFAULT_PASSWORD) ?? 'ChangeMe123!';
 
 const seedUsers: SeedUser[] = [
   {
-    email: process.env.SEED_ADMIN_EMAIL ?? 'admin@campuslink.local',
-    displayName: process.env.SEED_ADMIN_NAME ?? 'Campus Admin',
+    email:
+      optionalEnvValue(process.env.SEED_ADMIN_EMAIL) ??
+      'admin@campuslink.local',
+    displayName:
+      optionalEnvValue(process.env.SEED_ADMIN_NAME) ?? 'Campus Admin',
     role: UserRole.ADMIN,
-    password: process.env.SEED_ADMIN_PASSWORD ?? defaultPassword,
+    password:
+      optionalEnvValue(process.env.SEED_ADMIN_PASSWORD) ?? defaultPassword,
   },
   {
-    email: process.env.SEED_USER1_EMAIL ?? 'user1@campuslink.local',
-    displayName: process.env.SEED_USER1_NAME ?? 'Campus User One',
+    email:
+      optionalEnvValue(process.env.SEED_USER1_EMAIL) ??
+      'user1@campuslink.local',
+    displayName:
+      optionalEnvValue(process.env.SEED_USER1_NAME) ?? 'Campus User One',
     role: UserRole.USER,
-    password: process.env.SEED_USER1_PASSWORD ?? defaultPassword,
+    password:
+      optionalEnvValue(process.env.SEED_USER1_PASSWORD) ?? defaultPassword,
   },
   {
-    email: process.env.SEED_USER2_EMAIL ?? 'user2@campuslink.local',
-    displayName: process.env.SEED_USER2_NAME ?? 'Campus User Two',
+    email:
+      optionalEnvValue(process.env.SEED_USER2_EMAIL) ??
+      'user2@campuslink.local',
+    displayName:
+      optionalEnvValue(process.env.SEED_USER2_NAME) ?? 'Campus User Two',
     role: UserRole.USER,
-    password: process.env.SEED_USER2_PASSWORD ?? defaultPassword,
+    password:
+      optionalEnvValue(process.env.SEED_USER2_PASSWORD) ?? defaultPassword,
   },
 ];
 
