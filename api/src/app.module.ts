@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './common/storage/storage.module';
 import { LostFoundModule } from './lost-found/lost-found.module';
+import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { LostFoundModule } from './lost-found/lost-found.module';
     StorageModule,
     AuthModule,
     LostFoundModule,
+    CoursesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -67,7 +67,7 @@ export class ItemSubmissionRateLimitGuard implements CanActivate {
           ) * 1000,
       },
       {
-        name: 'daily',
+        name: 'daily',  
         limit: this.getPositiveIntFromEnv('ITEMS_SUBMIT_AUTH_DAILY_LIMIT', 120),
         windowMs:
           this.getPositiveIntFromEnv(
