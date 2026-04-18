@@ -6,28 +6,28 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { ModerationStatus } from "@/components/admin/types";
 
-export type LostFoundTab = ModerationStatus | "All";
+export type LostFoundTab = ModerationStatus | "All" | "Claim Requests";
 
 type FilterBarProps = {
   tabs: readonly LostFoundTab[];
   activeTab: LostFoundTab;
-  onTabChange: (tab: LostFoundTab) => void;
+  onTabChangeAction: (tab: LostFoundTab) => void;
   tabCounts: Record<LostFoundTab, number>;
   query: string;
-  onQueryChange: (query: string) => void;
+  onQueryChangeAction: (query: string) => void;
   highValueOnly: boolean;
-  onHighValueOnlyChange: (value: boolean) => void;
+  onHighValueOnlyChangeAction: (value: boolean) => void;
 };
 
 export function FilterBar({
   tabs,
   activeTab,
-  onTabChange,
+  onTabChangeAction,
   tabCounts,
   query,
-  onQueryChange,
+  onQueryChangeAction,
   highValueOnly,
-  onHighValueOnlyChange,
+  onHighValueOnlyChangeAction,
 }: FilterBarProps) {
   return (
     <section className="flex flex-wrap items-center justify-between gap-2">
@@ -36,10 +36,12 @@ export function FilterBar({
           <button
             key={tab}
             type="button"
-            onClick={() => onTabChange(tab)}
+            onClick={() => onTabChangeAction(tab)}
             className={cn(
               "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-              activeTab === tab
+              activeTab === tab && tab === "Claim Requests"
+                ? "bg-warning/20 text-warning shadow-sm"
+                : activeTab === tab
                 ? "bg-card text-primary shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
@@ -54,7 +56,7 @@ export function FilterBar({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
+            onChange={(e) => onQueryChangeAction(e.target.value)}
             placeholder="Search by case ID, item, or reporter..."
             className="h-10 rounded-lg bg-card pl-9 text-xs placeholder:text-muted-foreground/50"
           />
@@ -64,7 +66,7 @@ export function FilterBar({
           type="button"
           variant={highValueOnly ? "default" : "secondary"}
           className="h-8 rounded-md px-3 text-xs"
-          onClick={() => onHighValueOnlyChange(!highValueOnly)}
+          onClick={() => onHighValueOnlyChangeAction(!highValueOnly)}
         >
           <Filter className="mr-1.5 h-3.5 w-3.5" />
           {highValueOnly ? "High Value Only" : "All Value Tiers"}
