@@ -77,6 +77,16 @@ See [.env.example](.env.example).
 - JWT_REFRESH_SECRET
 - JWT_REFRESH_EXPIRES_IN_SECONDS
 
+### Telegram (Lost & Found announcements)
+
+- TELEGRAM_BOT_TOKEN
+- TELEGRAM_CHANNEL_ID
+  - Accepts either a channel username (example: @campus_link_channel) or numeric chat id.
+  - Add your bot as a channel admin before using announcements.
+- API_PUBLIC_BASE_URL
+  - Required when stored item photos are relative local paths (example: /uploads/items/...).
+  - Must be a public URL reachable by Telegram (example: https://api.your-domain.com).
+
 ## Scripts
 
 ### Development
@@ -107,6 +117,10 @@ See [.env.example](.env.example).
 
 - pnpm run db:show
   - Shows pending/applied migration status.
+
+- pnpm run db:seed:users
+  - Seeds local accounts (1 ADMIN + 2 USER) using values from .env.
+  - The script is idempotent by email and will update existing seeded accounts.
 
 ## Auth Endpoints
 
