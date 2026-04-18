@@ -3,8 +3,8 @@ import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 export class LocalLoginDto {
   @IsEmail()
   @MaxLength(255)
-  email: string;
+  email!: string;
 
   @IsString()
-  password: string;
+  password!: string;
 }

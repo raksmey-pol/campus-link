@@ -8,6 +8,7 @@ import { User } from '../database/entities/user.entity';
 import { LostFoundController } from './lost-found.controller';
 import { LostFoundService } from './lost-found.service';
 import { ItemSubmissionRateLimitGuard } from './guards/item-submission-rate-limit.guard';
+import { TelegramAnnouncementService } from './notifications/telegram-announcement.service';
 import { SubmissionRateLimitService } from './security/submission-rate-limit.service';
 
 @Module({
@@ -18,6 +19,7 @@ import { SubmissionRateLimitService } from './security/submission-rate-limit.ser
   controllers: [LostFoundController],
   providers: [
     LostFoundService,
+    TelegramAnnouncementService,
     SubmissionRateLimitService,
     ItemSubmissionRateLimitGuard,
   ],

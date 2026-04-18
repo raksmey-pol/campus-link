@@ -17,9 +17,16 @@
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@nestjs/schedule": ["./node_modules/@nestjs/schedule/dist/index.js"],
+      "@nestjs/websockets": ["./node_modules/@nestjs/websockets/dist/index.js"],
+      "@nestjs/platform-socket.io": ["./node_modules/@nestjs/platform-socket.io/dist/index.js"]
+    }
   }
+  
 }
