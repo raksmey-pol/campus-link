@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Swap WS Tester</h2>
+
+  <div>
+    <input id="token" placeholder="Paste JWT token here" style="width:600px"/>
+    <input id="label" placeholder="User label (A/B/C)"/>
+    <button onclick="connect()">Connect</button>
+  </div>
+
+  <div id="log" style="margin-top:20px; font-family:monospace; white-space:pre"></div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    let socket;
+
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+    }
+
+    function connect() {
+      const token = document.getElementById('token').value.trim();
+      const label = document.getElementById('label').value.trim() || 'User';
+
+      if (socket) socket.disconnect();
+
+      socket = io('http://localhost:3000/swap', {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('connect', () => log(`[${label}] Connected — socket id: ${socket.id}`));
+      socket.on('disconnect', () => log(`[${label}] Disconnected`));
+      socket.on('connect_error', (err) => log(`[${label}] Error: ${err.message}`));
+
+      socket.on('swap:matched',   (data) => log(`[${label}] swap:matched   → ${JSON.stringify(data)}`));
+      socket.on('swap:confirmed', (data) => log(`[${label}] swap:confirmed → ${JSON.stringify(data)}`));
+      socket.on('swap:completed', (data) => log(`[${label}] swap:completed → ${JSON.stringify(data)}`));
+      socket.on('swap:expired',   (data) => log(`[${label}] swap:expired   → ${JSON.stringify(data)}`));
+    }
+  </script>
+</body>
+</html>
