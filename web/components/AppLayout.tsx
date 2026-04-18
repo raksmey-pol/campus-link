@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { AuthUserProfile } from "@/lib/bff/auth";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Home", path: "/" },
@@ -21,9 +22,15 @@ const navItems = [
   { icon: ArrowLeftRight, label: "Swap", path: "/swap" },
 ];
 
+type AuthMeResponse = {
+  success?: boolean;
+  user?: AuthUserProfile;
+};
+
 export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [navExpanded, setNavExpanded] = useState(false);
+  const [userProfile, setUserProfile] = useState<AuthUserProfile | null>(null);
   const lastScrollY = useRef(0);
   const mainRef = useRef<HTMLDivElement>(null);
 
@@ -46,13 +53,59 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => el.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          headers: { accept: "application/json" },
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          setUserProfile(null);
+          return;
+        }
+
+        const payload = (await response
+          .json()
+          .catch(() => null)) as AuthMeResponse | null;
+        setUserProfile(payload?.user ?? null);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setUserProfile(null);
+      }
+    }
+
+    loadCurrentUser();
+
+    return () => abortController.abort();
+  }, []);
+
+  const isAuthenticated = Boolean(userProfile);
+  const profileName = isAuthenticated
+    ? userProfile?.displayName || "Student User"
+    : "Guest User";
+  const profileSecondaryText = isAuthenticated
+    ? userProfile?.email || "Signed in"
+    : "Sign in to continue";
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-card shadow-card">
         <div className="flex h-16 items-center gap-3 px-6">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">CL</span>
+            <span className="text-sm font-bold text-primary-foreground">
+              CL
+            </span>
           </div>
           <span className="text-lg font-bold text-foreground">CampusLink</span>
         </div>
@@ -68,30 +121,64 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
                   active
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                <item.icon className={cn("h-5 w-5", active && "stroke-[2.5]")} />
-                {item.label === "Home" ? "Dashboard" : item.label === "Lost" ? "Lost & Found" : item.label}
+                <item.icon
+                  className={cn("h-5 w-5", active && "stroke-[2.5]")}
+                />
+                {item.label === "Home"
+                  ? "Dashboard"
+                  : item.label === "Lost"
+                    ? "Lost & Found"
+                    : item.label}
               </Link>
             );
           })}
         </nav>
 
         <div className="p-4">
-          <div className="flex items-center gap-3 rounded-2xl bg-surface p-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <User className="h-5 w-5" />
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {profileName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {profileSecondaryText}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-semibold text-warning">
+                <Award className="h-3.5 w-3.5" />
+                <span>
+                  {typeof userProfile.civicPoints === "number"
+                    ? userProfile.civicPoints
+                    : 0}
+                </span>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">Student User</p>
-              <p className="text-xs text-muted-foreground truncate">student@aupp.edu.kh</p>
-            </div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-warning">
-              <Award className="h-3.5 w-3.5" />
-              <span>120</span>
-            </div>
-          </div>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-3 rounded-2xl bg-surface p-3 transition-colors hover:bg-accent"
+              aria-label="Go to login"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {profileName}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {profileSecondaryText}
+                </p>
+              </div>
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -112,9 +199,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <header className="flex lg:hidden h-14 items-center justify-between bg-card px-5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary">
-              <span className="text-xs font-bold text-primary-foreground">CL</span>
+              <span className="text-xs font-bold text-primary-foreground">
+                CL
+              </span>
             </div>
-            <span className="text-base font-bold text-foreground">CampusLink</span>
+            <span className="text-base font-bold text-foreground">
+              CampusLink
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
@@ -130,7 +221,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto px-4 py-5 lg:px-8 lg:py-6 pb-24 lg:pb-6">
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-auto px-4 py-5 lg:px-8 lg:py-6 pb-24 lg:pb-6"
+        >
           <div className="animate-fade-in max-w-4xl mx-auto">{children}</div>
         </main>
       </div>
@@ -141,7 +235,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           "fixed bottom-0 left-0 right-0 z-50 flex lg:hidden bg-card/95 backdrop-blur-lg safe-bottom transition-all duration-300 ease-in-out",
           navExpanded
             ? "shadow-[0_-4px_24px_-4px_hsl(200_20%_12%/0.12)] rounded-t-3xl mx-2 mb-1 px-2"
-            : "shadow-[0_-2px_10px_-2px_hsl(200_20%_12%/0.06)]"
+            : "shadow-[0_-2px_10px_-2px_hsl(200_20%_12%/0.06)]",
         )}
       >
         {navItems.map((item) => {
@@ -153,7 +247,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300",
                 navExpanded ? "py-3" : "py-2 pt-2.5",
-                active ? "text-primary" : "text-muted-foreground"
+                active ? "text-primary" : "text-muted-foreground",
               )}
             >
               <div
@@ -165,14 +259,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       : "h-11 w-11"
                     : active
                       ? "h-8 w-8 bg-primary/10"
-                      : "h-8 w-8"
+                      : "h-8 w-8",
                 )}
               >
                 <item.icon
                   className={cn(
                     "transition-all duration-300",
                     navExpanded ? "h-5.5 w-5.5" : "h-5 w-5",
-                    active && "stroke-[2.5]"
+                    active && "stroke-[2.5]",
                   )}
                 />
               </div>
@@ -181,7 +275,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   "font-medium transition-all duration-300 overflow-hidden",
                   navExpanded
                     ? "text-[11px] opacity-100 max-h-4 mt-0.5"
-                    : "text-[0px] opacity-0 max-h-0"
+                    : "text-[0px] opacity-0 max-h-0",
                 )}
               >
                 {item.label}
