@@ -24,8 +24,11 @@ export class SwapMatchesController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async getMatch(@Param('id', ParseIntPipe) id: number) {
-    return ok(await this.swapService.getMatchById(id));
+  async getMatch(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return ok(await this.swapService.getMatchById(id, user));
   }
 
   @UseGuards(JwtAuthGuard)

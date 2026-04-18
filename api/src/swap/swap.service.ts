@@ -249,7 +249,7 @@ export class SwapService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async adminDeleteSwap(id: number, admin: User): Promise<void> {
+  async adminDeleteSwap(id: number, _admin: User): Promise<void> {
     const swap = await this.swapRequestRepo.findOne({ where: { id } });
     if (!swap) throw new NotFoundException('Swap request not found');
     await this.swapRequestRepo.remove(swap);
@@ -295,7 +295,7 @@ export class SwapService {
       .getMany();
   }
 
-  async getMatchById(id: number) {
+  async getMatchById(id: number, user: User) {
     const match = await this.swapMatchRepo.findOne({
       where: { id },
       relations: {
@@ -318,6 +318,10 @@ export class SwapService {
     });
     if (!match) throw new NotFoundException('Match not found');
 
+    const participants = this.getParticipants(match);
+    if (!participants.find((p) => p.id === user.id)) {
+      throw new ForbiddenException('You are not a participant in this match');
+    }
     const confirmations = await this.swapConfirmationRepo.find({
       where: { match: { id } },
       relations: { user: true },
@@ -336,7 +340,10 @@ export class SwapService {
       },
     });
     if (!match) throw new NotFoundException('Match not found');
-    if (match.status !== MatchStatus.PROPOSED) {
+    if (
+      match.status !== MatchStatus.PROPOSED &&
+      match.status !== MatchStatus.ACCEPTED
+    ) {
       throw new BadRequestException('Match is no longer pending confirmation');
     }
 

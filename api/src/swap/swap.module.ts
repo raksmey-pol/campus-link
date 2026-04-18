@@ -37,7 +37,7 @@ import { SwapMatchesController } from './swap-matches.controller';
       }),
     }),
   ],
-  controllers: [SwapRequestsController, SwapMatchesController],
+  controllers: [SwapMatchesController, SwapRequestsController],
   providers: [SwapService, MatchingService, SwapGateway, SwapExpiryCron],
 })
 export class SwapModule {}

@@ -36,17 +36,17 @@ export class SwapRequestsController {
     return ok(await this.swapService.listMySwaps(user));
   }
 
-  @Get(':id')
-  async getOne(@Param('id', ParseIntPipe) id: number) {
-    return ok(await this.swapService.getSwapById(id));
-  }
-
   @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() dto: CreateSwapRequestDto, @CurrentUser() user: User) {
     return ok(await this.swapService.createSwap(dto, user), {
       message: 'Swap request created',
     });
+  }
+
+  @Get(':id')
+  async getOne(@Param('id', ParseIntPipe) id: number) {
+    return ok(await this.swapService.getSwapById(id));
   }
 
   @UseGuards(JwtAuthGuard)
