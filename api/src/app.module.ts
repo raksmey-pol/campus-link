@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './common/storage/storage.module';
 import { LostFoundModule } from './lost-found/lost-found.module';
 import { CoursesModule } from './courses/courses.module';
+import { SwapModule } from './swap/swap.module';
 
 @Module({
   imports: [
@@ -30,9 +32,11 @@ import { CoursesModule } from './courses/courses.module';
       }),
     }),
     StorageModule,
+    ScheduleModule.forRoot(),
     AuthModule,
     LostFoundModule,
     CoursesModule,
+    SwapModule,
   ],
   controllers: [AppController],
   providers: [AppService],

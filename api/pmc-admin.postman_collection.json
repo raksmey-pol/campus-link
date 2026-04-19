@@ -1,0 +1,138 @@
+{
+  "info": {
+    "_postman_id": "62b99827-e9a0-40a0-83a5-9c032f01c027",
+    "name": "CampusLink — Admin",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "31703997"
+  },
+  "item": [
+    {
+      "name": "lost-found",
+      "item": [
+        {
+          "name": "update-status",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "status",
+                  "value": "APPROVED",
+                  "type": "text",
+                  "uuid": "b9333fab-e8ab-4867-bc1b-1a1a4c6f79b6"
+                },
+                {
+                  "key": "rejection_reason",
+                  "value": "Cannot post",
+                  "type": "text",
+                  "uuid": "e8db87d9-e3ae-4a86-858a-481d5fd5dfd1",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{API_URL}}/items/:id/status",
+              "host": [
+                "{{API_URL}}"
+              ],
+              "path": [
+                "items",
+                ":id",
+                "status"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "9"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list-items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{API_URL}}/items",
+              "host": [
+                "{{API_URL}}"
+              ],
+              "path": [
+                "items"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "resolve",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{TOKEN}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{API_URL}}/items/{{itemId}}/resolve",
+              "host": [
+                "{{API_URL}}"
+              ],
+              "path": [
+                "items",
+                "{{itemId}}",
+                "resolve"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{TOKEN_ADMIN}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}

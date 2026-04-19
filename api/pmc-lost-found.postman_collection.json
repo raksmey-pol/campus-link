@@ -1,0 +1,294 @@
+{
+  "info": {
+    "_postman_id": "32aed0c6-7b32-4c29-a005-9f19dac43eea",
+    "name": "CampusLink — Module A: Lost & Found",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "31703997"
+  },
+  "item": [
+    {
+      "name": "item-details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{API_URL}}/items/:id",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "9"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "list-items",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{API_URL}}/items",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "submit-found-report",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "title",
+              "value": "Phone",
+              "type": "text"
+            },
+            {
+              "key": "description",
+              "value": "Iphone 16 pro max",
+              "type": "text"
+            },
+            {
+              "key": "value_tier",
+              "value": "MEDIUM",
+              "type": "text"
+            },
+            {
+              "key": "location",
+              "value": "First floor",
+              "type": "text"
+            },
+            {
+              "key": "photo",
+              "type": "file",
+              "uuid": "0e4edd93-89af-417a-8d02-eb5632aaee19",
+              "src": "/C:/Users/Lyhour/Pictures/Screenshots/Screenshot 2026-04-14 120716.png"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{API_URL}}/items",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "view-item-photo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{API_URL}}/uploads/items/item-1776138858383-830961.png",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "uploads",
+            "items",
+            "item-1776138858383-830961.png"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "claim-form",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{TOKEN}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"proof_description\": \"This is my item because it has my name sticker and specific marks on the case.\"\n}"
+        },
+        "url": {
+          "raw": "{{API_URL}}/items/{{itemId}}/claims",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items",
+            "{{itemId}}",
+            "claims"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "claim",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{TOKEN}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"status\": \"APPROVED\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{API_URL}}/items/:id/claims/:claimId/status",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items",
+            ":id",
+            "claims",
+            ":claimId",
+            "status"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "9"
+            },
+            {
+              "key": "claimId",
+              "value": "4"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "resolve",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{TOKEN_CLAIMER}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{API_URL}}/items/:id/resolve",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "items",
+            ":id",
+            "resolve"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "9"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "item-photo",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{API_URL}}/uploads/items/item-1776140773129-817150.png",
+          "host": [
+            "{{API_URL}}"
+          ],
+          "path": [
+            "uploads",
+            "items",
+            "item-1776140773129-817150.png"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{TOKEN_CLAIMER}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
