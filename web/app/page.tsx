@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   ArrowLeftRight,
@@ -9,6 +9,7 @@ import {
   Package,
   Users,
   Plus,
+  Award,
   Camera,
   MessageSquare,
   Repeat,
@@ -21,6 +22,10 @@ import {
 import { AppLayout } from "@/components/AppLayout";
 import { cn } from "@/lib/utils";
 import { useRole } from "@/contexts/RoleContext";
+import {
+  fetchMyPointHistory,
+  type UserPointHistoryEntry,
+} from "@/lib/services/user-points";
 
 const adminStats = [
   { label: "Recovered", value: "47", icon: Package, change: "+12 this week", color: "bg-primary/10 text-primary" },
@@ -54,6 +59,16 @@ const quickActions = [
   { icon: Repeat, label: "Swap", path: "/swap", color: "bg-info" },
 ];
 
+const pointTypeLabelMap: Record<string, string> = {
+  FINDER_REWARD: "Finder reward",
+  TRUST_CONFIRM: "Trust confirmation",
+  RESOURCE_UPLOAD: "Resource upload",
+  REVIEW_HELPFUL: "Helpful review",
+  QA_UPVOTE: "Q&A upvote",
+  MENTOR_BONUS: "Mentor bonus",
+  SWAP_COMPLETE: "Swap completed",
+};
+
 const upcomingClasses = [
   { time: "09:00", name: "Web Development III", room: "Room 401", code: "INFO 653" },
   { time: "11:00", name: "Data Structures", room: "Room 205", code: "CS 201" },
@@ -63,11 +78,101 @@ const upcomingClasses = [
 export default function Dashboard() {
   const [fabOpen, setFabOpen] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [civicPoints, setCivicPoints] = useState(0);
+  const [pointHistory, setPointHistory] = useState<UserPointHistoryEntry[]>([]);
+  const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
   const { role, setRole } = useRole();
 
   const today = new Date();
   const dayName = today.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
   const dateStr = today.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+  useEffect(() => {
+    if (role !== "student") {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadPointHistory() {
+      setPointHistoryLoading(true);
+
+      try {
+        const history = await fetchMyPointHistory({ limit: 12 });
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCivicPoints(history.civicPoints);
+        setPointHistory(history.transactions);
+      } catch {
+        if (!isMounted) {
+          return;
+        }
+
+        setCivicPoints(0);
+        setPointHistory([]);
+      } finally {
+        if (isMounted) {
+          setPointHistoryLoading(false);
+        }
+      }
+    }
+
+    void loadPointHistory();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [role]);
+
+  const pointBreakdown = useMemo(() => {
+    let reports = 0;
+    let reviews = 0;
+    let swaps = 0;
+
+    for (const entry of pointHistory) {
+      if (entry.amount <= 0) {
+        continue;
+      }
+
+      if (entry.type === "FINDER_REWARD" || entry.type === "TRUST_CONFIRM") {
+        reports += entry.amount;
+        continue;
+      }
+
+      if (entry.type === "SWAP_COMPLETE") {
+        swaps += entry.amount;
+        continue;
+      }
+
+      reviews += entry.amount;
+    }
+
+    return {
+      reports,
+      reviews,
+      swaps,
+    };
+  }, [pointHistory]);
+
+  const recentPointActivity = useMemo(() => pointHistory.slice(0, 5), [pointHistory]);
+
+  function formatPointDate(value: string) {
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return "Unknown date";
+    }
+
+    return parsed.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
 
   return (
     <AppLayout>
@@ -135,7 +240,7 @@ export default function Dashboard() {
               </div>
 
               <p className="text-4xl font-bold tracking-tight">
-                {balanceVisible ? "120" : "•••"}
+                {balanceVisible ? civicPoints.toLocaleString() : "•••"}
               </p>
 
               <div className="h-px bg-white/15 my-4" />
@@ -143,15 +248,19 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider opacity-60">Reports</p>
-                  <p className="text-sm font-bold text-success mt-0.5">+5</p>
+                  <p className="text-sm font-bold text-success mt-0.5">
+                    +{pointBreakdown.reports.toLocaleString()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider opacity-60">Reviews</p>
-                  <p className="text-sm font-bold text-warning mt-0.5">+8</p>
+                  <p className="text-sm font-bold text-warning mt-0.5">
+                    +{pointBreakdown.reviews.toLocaleString()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider opacity-60">Swaps</p>
-                  <p className="text-sm font-bold mt-0.5">+3</p>
+                  <p className="text-sm font-bold mt-0.5">+{pointBreakdown.swaps.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -213,6 +322,56 @@ export default function Dashboard() {
                   <span className="text-xs font-semibold text-foreground">{cls.time}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {role === "student" && (
+          <div className="rounded-2xl bg-card shadow-card overflow-hidden">
+            <div className="flex items-center justify-between p-4 pb-2">
+              <h2 className="text-sm font-semibold text-foreground">Recent Point Activity</h2>
+              <span className="text-xs text-muted-foreground">Latest rewards</span>
+            </div>
+            <div>
+              {pointHistoryLoading ? (
+                <div className="px-4 py-4 text-sm text-muted-foreground">Loading point activity...</div>
+              ) : recentPointActivity.length === 0 ? (
+                <div className="px-4 py-4 text-sm text-muted-foreground">
+                  No point activity yet. Complete actions in Lost & Found, Courses, and Swap to earn points.
+                </div>
+              ) : (
+                recentPointActivity.map((entry, index) => {
+                  const isPositive = entry.amount >= 0;
+                  const amountText = `${isPositive ? "+" : ""}${entry.amount}`;
+                  const entryLabel = pointTypeLabelMap[entry.type] ?? entry.type;
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3",
+                        index < recentPointActivity.length - 1 && "border-b border-border"
+                      )}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <Award className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{entryLabel}</p>
+                        <p className="text-xs text-muted-foreground">{formatPointDate(entry.createdAt)}</p>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-sm font-bold",
+                          isPositive ? "text-success" : "text-destructive"
+                        )}
+                      >
+                        {amountText}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         )}
