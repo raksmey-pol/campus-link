@@ -17,8 +17,10 @@ export type BackendCourse = {
 
 export type BackendUser = {
   id: number;
-  display_name: string;
-  avatar_url: string | null;
+  display_name?: string;
+  displayName?: string;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
 };
 
 export type BackendSwapRequest = {
@@ -116,9 +118,12 @@ export async function fetchSwapById(id: number) {
 }
 
 export async function createSwap(payload: CreateSwapPayload) {
+  const clean = Object.fromEntries(
+    Object.entries(payload).filter(([, v]) => v !== undefined && v !== ""),
+  );
   const res = await apiFetch<ApiResponse<BackendSwapRequest>>("/api/swap", {
     method: "POST",
-    body: payload as unknown as Record<string, unknown>,
+    body: clean as Record<string, unknown>,
   });
   return res.data;
 }
@@ -164,4 +169,8 @@ export function formatRelativeTime(dateStr: string): string {
   if (mins < 60) return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
+}
+
+export function getUserDisplayName(user: BackendUser): string {
+  return user.display_name ?? user.displayName ?? "Unknown";
 }

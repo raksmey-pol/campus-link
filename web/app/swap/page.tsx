@@ -29,6 +29,7 @@ import {
   formatExpiresAt, formatRelativeTime,
   type BackendSwapRequest, type BackendSwapMatch, type SwapStatus, type MatchStatus,
 } from "@/lib/services/swap";
+import { getUserDisplayName } from "@/lib/services/swap";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,10 @@ const createSwapSchema = z
     swap_type: z.enum(["SECTION", "COURSE"]),
     current_course_id: z.coerce.number().min(1, "Required"),
     current_section: z.string().max(10).optional(),
-    desired_course_id: z.coerce.number().optional(),
+    desired_course_id: z.preprocess(
+      (v) => (v === "" || v === 0 || v === "0" ? undefined : v),
+      z.coerce.number().min(1).optional(),
+    ),
     desired_section: z.string().max(10).optional(),
     notes: z.string().max(500).optional(),
   })
@@ -127,12 +131,11 @@ function SwapCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>by {swap.requester.display_name} · {formatRelativeTime(swap.created_at)}</span>
+        <span>{swap.requester ? "by" + getUserDisplayName(swap.requester) + " · ": ""}{formatRelativeTime(swap.created_at)}</span>
         {swap.status === "OPEN" && (
           <span className="text-warning font-medium">{formatExpiresAt(swap.expires_at)}</span>
         )}
       </div>
-
       {swap.notes && (
         <p className="mt-2 text-[11px] text-muted-foreground italic border-t border-border pt-2">
           &quot;{swap.notes}&quot;
@@ -155,7 +158,7 @@ function MatchCard({
 }) {
   const config = matchStatusConfig[match.status];
   const isPending = match.status === "PROPOSED" || match.status === "ACCEPTED";
-  const confirmedCount = match.confirmations.length;
+  const confirmedCount = (match.confirmations ?? []).length;
   const totalCount = match.requestC ? 3 : 2;
 
   const requests = [match.requestA, match.requestB, ...(match.requestC ? [match.requestC] : [])];
@@ -264,6 +267,10 @@ function CreateSwapDialog({
         current_course_id: data.current_course_id,
         current_section: data.current_section || undefined,
         desired_course_id: data.desired_course_id || undefined,
+        // only include desired_course_id if it's a COURSE swap AND has a value
+        ...(data.swap_type === "COURSE" && data.desired_course_id
+        ? { desired_course_id: data.desired_course_id }
+        : {}),
         desired_section: data.desired_section || undefined,
         notes: data.notes || undefined,
       });
@@ -507,7 +514,7 @@ const loadMatches = useCallback(async () => {
     const matchesSearch =
       s.current_course.code.toLowerCase().includes(q) ||
       (s.desired_course?.code ?? "").toLowerCase().includes(q) ||
-      s.requester.display_name.toLowerCase().includes(q);
+      (s.requester ? getUserDisplayName(s.requester) : "Unknown").toLowerCase().includes(q);
     const matchesStatus = filterStatus === "ALL" || s.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
