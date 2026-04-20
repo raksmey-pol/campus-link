@@ -26,7 +26,7 @@
 
       if (socket) socket.disconnect();
 
-      socket = io('http://localhost:3000/swap', {
+      socket = io('http://localhost:3001/swap', {
         auth: { token },
         transports: ['websocket']
       });
