@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "http://localhost:8000/api";
+const DEFAULT_API_URL = "http://localhost:3001/api";
 
 function normalizeApiBaseUrl(baseUrl: string) {
   const trimmed = baseUrl.trim().replace(/\/+$/, "");
@@ -14,4 +14,8 @@ export function getApiUrl() {
   const baseUrl =
     process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
   return normalizeApiBaseUrl(baseUrl);
+}
+
+export function getPublicApiUrl() {
+  return process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
 }
