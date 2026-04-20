@@ -11,6 +11,13 @@ type ProxyOptions = {
   jsonBody?: unknown;
 };
 
+type ProxyFormDataOptions = {
+  request: NextRequest;
+  method: "POST" | "PATCH" | "PUT";
+  path: string;
+  searchParams?: URLSearchParams;
+};
+
 function buildForwardHeaders(request: NextRequest, hasJsonBody: boolean) {
   const headers = new Headers();
   headers.set("accept", "application/json");
@@ -72,7 +79,57 @@ export async function proxyBackendJson({
 
     return NextResponse.json(payload, { status: response.status });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected BFF proxy error";
+    const message =
+      error instanceof Error ? error.message : "Unexpected BFF proxy error";
+    return NextResponse.json(
+      {
+        success: false,
+        message,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function proxyBackendFormData({
+  request,
+  method,
+  path,
+  searchParams,
+}: ProxyFormDataOptions) {
+  try {
+    const backendBaseUrl = getApiUrl();
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const queryString = searchParams?.toString();
+    const targetUrl = `${backendBaseUrl}${normalizedPath}${queryString ? `?${queryString}` : ""}`;
+
+    const formData = await request.formData();
+
+    const response = await fetch(targetUrl, {
+      method,
+      headers: buildForwardHeaders(request, false),
+      body: formData,
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+    let payload: unknown = null;
+
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        payload = {
+          success: response.ok,
+          message: text,
+        };
+      }
+    }
+
+    return NextResponse.json(payload, { status: response.status });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected BFF proxy error";
     return NextResponse.json(
       {
         success: false,

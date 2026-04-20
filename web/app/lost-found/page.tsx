@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { AppLayout } from "@/components/AppLayout";
 import {
   Search,
@@ -33,10 +39,12 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
+  createLostFoundItem,
   fetchLostFoundFeed,
   type LostFoundFeedItem,
   type LostFoundFeedStatus,
 } from "@/lib/services/lost-found";
+import { ApiFetchError } from "@/lib/fetch";
 
 const statusConfig: Record<
   LostFoundFeedStatus,
@@ -195,6 +203,15 @@ export default function LostFound() {
   const [items, setItems] = useState<LostFoundFeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [reportTitle, setReportTitle] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportLocation, setReportLocation] = useState("");
+  const [reportValueTier, setReportValueTier] =
+    useState<LostFoundFeedItem["valueTier"]>("MEDIUM");
+  const [reportPhoto, setReportPhoto] = useState<File | null>(null);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportSuccess, setReportSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -230,6 +247,107 @@ export default function LostFound() {
       canceled = true;
     };
   }, []);
+
+  function resetReportForm() {
+    setReportTitle("");
+    setReportDescription("");
+    setReportLocation("");
+    setReportValueTier("MEDIUM");
+    setReportPhoto(null);
+    setReportError(null);
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+
+    if (open) {
+      setReportSuccess(null);
+      setReportError(null);
+    } else {
+      setReportError(null);
+    }
+  }
+
+  function handleReportPhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    setReportPhoto(file);
+
+    if (file) {
+      setReportError(null);
+    }
+  }
+
+  async function handleReportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedTitle = reportTitle.trim();
+    const normalizedDescription = reportDescription.trim();
+    const normalizedLocation = reportLocation.trim();
+
+    if (!normalizedTitle || !normalizedLocation) {
+      setReportError("Please complete title and location before submitting.");
+      return;
+    }
+
+    if (normalizedDescription.length < 10) {
+      setReportError("Description must be at least 10 characters.");
+      return;
+    }
+
+    if (!reportPhoto) {
+      setReportError("Please upload a photo of the item.");
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    setReportError(null);
+    setReportSuccess(null);
+
+    try {
+      const createdItem = await createLostFoundItem({
+        title: normalizedTitle,
+        description: normalizedDescription,
+        location: normalizedLocation,
+        valueTier: reportValueTier,
+        photo: reportPhoto,
+      });
+
+      setItems((current) => [
+        createdItem,
+        ...current.filter((item) => item.id !== createdItem.id),
+      ]);
+      setDialogOpen(false);
+      resetReportForm();
+      setReportSuccess(
+        "Report submitted successfully and is now pending moderation.",
+      );
+    } catch (error) {
+      if (
+        error instanceof ApiFetchError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        setReportError(
+          "Your session has expired. Please sign in and try again.",
+        );
+      } else {
+        setReportError(
+          error instanceof Error
+            ? error.message
+            : "Unable to submit your report right now.",
+        );
+      }
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  }
+
+  const reportDescriptionLength = reportDescription.trim().length;
+  const canSubmitReport =
+    !isSubmittingReport &&
+    reportTitle.trim().length > 0 &&
+    reportLocation.trim().length > 0 &&
+    reportDescriptionLength >= 10 &&
+    reportPhoto !== null;
 
   const statusCounts = useMemo(
     () => ({
@@ -289,7 +407,7 @@ export default function LostFound() {
               </p>
             </div>
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
                 <Button className="h-11 rounded-xl px-4 text-sm font-semibold shadow-fab">
                   <Plus className="mr-1.5 h-4.5 w-4.5" />
@@ -300,33 +418,62 @@ export default function LostFound() {
                 <DialogHeader>
                   <DialogTitle>Report a Found Item</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 pt-2">
+                <form className="space-y-4 pt-2" onSubmit={handleReportSubmit}>
                   <div>
-                    <Label>Item Title</Label>
+                    <Label htmlFor="report-item-title">Item Title</Label>
                     <Input
+                      id="report-item-title"
                       placeholder="e.g., Blue Water Bottle"
                       className="mt-1.5 rounded-xl"
+                      value={reportTitle}
+                      onChange={(event) => setReportTitle(event.target.value)}
+                      disabled={isSubmittingReport}
                     />
                   </div>
                   <div>
-                    <Label>Description</Label>
+                    <Label htmlFor="report-item-description">Description</Label>
                     <Textarea
+                      id="report-item-description"
                       placeholder="Describe the item..."
                       className="mt-1.5 rounded-xl"
                       rows={3}
+                      value={reportDescription}
+                      onChange={(event) =>
+                        setReportDescription(event.target.value)
+                      }
+                      disabled={isSubmittingReport}
                     />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {reportDescriptionLength}/10+ characters
+                    </p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                      <Label>Location Found</Label>
+                      <Label htmlFor="report-item-location">
+                        Location Found
+                      </Label>
                       <Input
+                        id="report-item-location"
                         placeholder="e.g., Library 2F"
                         className="mt-1.5 rounded-xl"
+                        value={reportLocation}
+                        onChange={(event) =>
+                          setReportLocation(event.target.value)
+                        }
+                        disabled={isSubmittingReport}
                       />
                     </div>
                     <div>
                       <Label>Value Tier</Label>
-                      <Select>
+                      <Select
+                        value={reportValueTier}
+                        onValueChange={(value) =>
+                          setReportValueTier(
+                            value as LostFoundFeedItem["valueTier"],
+                          )
+                        }
+                        disabled={isSubmittingReport}
+                      >
                         <SelectTrigger className="mt-1.5 rounded-xl">
                           <SelectValue placeholder="Select tier" />
                         </SelectTrigger>
@@ -340,21 +487,52 @@ export default function LostFound() {
                     </div>
                   </div>
                   <div>
-                    <Label>Photo</Label>
-                    <div className="mt-1.5 flex h-24 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface text-muted-foreground transition-colors hover:bg-muted">
-                      <div className="flex flex-col items-center gap-1">
+                    <Label htmlFor="report-item-photo">Photo</Label>
+                    <Input
+                      id="report-item-photo"
+                      type="file"
+                      accept="image/jpeg,image/png,image/jpg,image/webp"
+                      className="sr-only"
+                      onChange={handleReportPhotoChange}
+                      disabled={isSubmittingReport}
+                    />
+                    <label
+                      htmlFor="report-item-photo"
+                      className="mt-1.5 flex h-24 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface text-muted-foreground transition-colors hover:bg-muted"
+                    >
+                      <div className="flex flex-col items-center gap-1 px-3 text-center">
                         <Camera className="h-5 w-5" />
-                        <span className="text-xs">Click to upload photo</span>
+                        <span className="text-xs font-medium">
+                          {reportPhoto
+                            ? `Selected: ${reportPhoto.name}`
+                            : "Click to upload photo"}
+                        </span>
+                        {reportPhoto ? (
+                          <span className="text-[11px] text-muted-foreground/80">
+                            {(reportPhoto.size / 1024 / 1024).toFixed(2)} MB
+                          </span>
+                        ) : null}
                       </div>
-                    </div>
+                    </label>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      JPEG, PNG, JPG, or WebP. Maximum 5 MB.
+                    </p>
                   </div>
+
+                  {reportError ? (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                      {reportError}
+                    </div>
+                  ) : null}
+
                   <Button
+                    type="submit"
                     className="h-11 w-full rounded-xl"
-                    onClick={() => setDialogOpen(false)}
+                    disabled={!canSubmitReport}
                   >
-                    Submit Report
+                    {isSubmittingReport ? "Submitting..." : "Submit Report"}
                   </Button>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
           </div>
@@ -392,6 +570,12 @@ export default function LostFound() {
         {loadError ? (
           <div className="rounded-2xl border border-destructive/25 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {loadError}
+          </div>
+        ) : null}
+
+        {reportSuccess ? (
+          <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">
+            {reportSuccess}
           </div>
         ) : null}
 
