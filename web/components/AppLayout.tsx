@@ -10,10 +10,12 @@ import {
   Bell,
   User,
   Award,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthUserProfile } from "@/lib/bff/auth";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Home", path: "/" },
@@ -139,26 +141,33 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
         <div className="p-4">
           {isAuthenticated ? (
-            <div className="flex items-center gap-3 rounded-2xl bg-surface p-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="h-5 w-5" />
+            <div className="space-y-3 rounded-2xl bg-surface p-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <User className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {profileName}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {profileSecondaryText}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 text-xs font-semibold text-warning">
+                  <Award className="h-3.5 w-3.5" />
+                  <span>{userProfile?.civicPoints ?? 0}</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {profileName}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {profileSecondaryText}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-warning">
-                <Award className="h-3.5 w-3.5" />
-                <span>
-                  {typeof userProfile.civicPoints === "number"
-                    ? userProfile.civicPoints
-                    : 0}
-                </span>
-              </div>
+
+              <SignOutButton
+                onSignedOut={() => setUserProfile(null)}
+                className="w-full gap-2 border border-border/70 bg-background text-foreground hover:bg-accent"
+                pendingLabel="Signing out..."
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign out</span>
+              </SignOutButton>
             </div>
           ) : (
             <Link
