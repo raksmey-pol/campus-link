@@ -45,6 +45,11 @@ export enum ResourceStatus {
   REJECTED = 'REJECTED',
 }
 
+export enum VoteType {
+  UPVOTE = 'UPVOTE',
+  DOWNVOTE = 'DOWNVOTE',
+}
+
 export enum SwapType {
   SECTION = 'SECTION',
   COURSE = 'COURSE',
