@@ -29,6 +29,9 @@ export class CourseAnswer {
   @Column({ default: 0 })
   upvotes!: number;
 
+  @Column({ default: 0 })
+  downvotes!: number;
+
   // Only the question author can accept an answer
   @Column({ default: false })
   is_accepted!: boolean;

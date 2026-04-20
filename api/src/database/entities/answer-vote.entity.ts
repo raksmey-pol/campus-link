@@ -1,4 +1,5 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
   Index,
@@ -8,6 +9,7 @@ import {
 } from 'typeorm';
 import { CourseAnswer } from './course-answer.entity';
 import { User } from './user.entity';
+import { VoteType } from '../enums';
 
 @Entity('answer_votes')
 @Index('UQ_answer_vote_user', ['answer', 'user'], { unique: true })
@@ -22,6 +24,13 @@ export class AnswerVote {
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
   user!: User;
+
+  @Column({
+    type: 'enum',
+    enum: VoteType,
+    default: VoteType.UPVOTE,
+  })
+  vote_type!: VoteType;
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;

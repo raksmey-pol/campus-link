@@ -128,7 +128,10 @@ export class InitialSchema1775995148456 implements MigrationInterface {
       `CREATE TABLE "claims" ("id" SERIAL NOT NULL, "proof_description" text NOT NULL, "status" "public"."claims_status_enum" NOT NULL DEFAULT 'PENDING', "rejection_reason" text, "reviewed_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "item_id" integer NOT NULL, "claimer_id" integer NOT NULL, "moderator_id" integer, CONSTRAINT "PK_96c91970c0dcb2f69fdccd0a698" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "answer_votes" ("id" SERIAL NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "answer_id" integer NOT NULL, "user_id" integer NOT NULL, CONSTRAINT "PK_767f6bc508e4f2d6d08d65beb31" PRIMARY KEY ("id"))`,
+      `CREATE TYPE "public"."answer_votes_vote_type_enum" AS ENUM('UPVOTE', 'DOWNVOTE')`,
+    );
+    await queryRunner.query(
+      `CREATE TABLE "answer_votes" ("id" SERIAL NOT NULL, "vote_type" "public"."answer_votes_vote_type_enum" NOT NULL DEFAULT 'UPVOTE', "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "answer_id" integer NOT NULL, "user_id" integer NOT NULL, CONSTRAINT "PK_767f6bc508e4f2d6d08d65beb31" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
       `CREATE UNIQUE INDEX "UQ_answer_vote_user" ON "answer_votes" ("answer_id", "user_id") `,
@@ -354,6 +357,7 @@ export class InitialSchema1775995148456 implements MigrationInterface {
     );
     await queryRunner.query(`DROP INDEX "public"."UQ_answer_vote_user"`);
     await queryRunner.query(`DROP TABLE "answer_votes"`);
+    await queryRunner.query(`DROP TYPE "public"."answer_votes_vote_type_enum"`);
     await queryRunner.query(`DROP TABLE "claims"`);
     await queryRunner.query(`DROP TYPE "public"."claims_status_enum"`);
     await queryRunner.query(`DROP TABLE "course_answers"`);
