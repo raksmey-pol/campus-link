@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -27,6 +28,7 @@ import { UserRole } from '../database/enums';
 import { ItemSubmissionRateLimitGuard } from './guards/item-submission-rate-limit.guard';
 import { CreateItemDto } from './dto/create-item.dto';
 import { CreateClaimDto } from './dto/create-claim.dto';
+import { ExportItemsCsvDto } from './dto/export-items-csv.dto';
 import { ListItemsDto } from './dto/list-items.dto';
 import { UpdateClaimStatusDto } from './dto/update-claim-status.dto';
 import { UpdateItemStatusDto } from './dto/update-item-status.dto';
@@ -59,6 +61,23 @@ export class LostFoundController {
     return ok(result.data, {
       message: 'Items retrieved successfully',
       meta: result.meta as Record<string, unknown>,
+    });
+  }
+
+  // =========================== GET /items/export/csv =========================
+  //  Moderator/Admin: export filtered moderation queue as CSV.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  @Get('export/csv')
+  async exportItemsCsv(
+    @Query() query: ExportItemsCsvDto,
+    @CurrentUser() user: User,
+  ) {
+    const { csv, filename } = await this.itemsService.exportItemsCsv(query, user);
+
+    return new StreamableFile(Buffer.from(`\uFEFF${csv}`, 'utf-8'), {
+      type: 'text/csv; charset=utf-8',
+      disposition: `attachment; filename="${filename}"`,
     });
   }
 

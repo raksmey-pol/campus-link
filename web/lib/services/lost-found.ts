@@ -360,6 +360,68 @@ export async function fetchModerationCases() {
   return response.data.map(mapBackendItemToModerationCase);
 }
 
+type ExportModerationCasesCsvParams = {
+  status?: "PENDING" | "APPROVED" | "REJECTED" | "CLAIMED" | "RESOLVED";
+  search?: string;
+  highValueOnly?: boolean;
+  claimRequestsOnly?: boolean;
+};
+
+export async function exportModerationCasesCsv(
+  params: ExportModerationCasesCsvParams,
+): Promise<{ blob: Blob; filename: string }> {
+  const searchParams = new URLSearchParams();
+
+  if (params.status) {
+    searchParams.set("status", params.status);
+  }
+  if (params.search?.trim()) {
+    searchParams.set("search", params.search.trim());
+  }
+  if (params.highValueOnly) {
+    searchParams.set("high_value_only", "true");
+  }
+  if (params.claimRequestsOnly) {
+    searchParams.set("claim_requests_only", "true");
+  }
+
+  const requestUrl = searchParams.toString()
+    ? `/api/lost-found/export/csv?${searchParams.toString()}`
+    : "/api/lost-found/export/csv";
+
+  const response = await fetch(requestUrl, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: {
+      accept: "text/csv,application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let message = `Request failed with status ${response.status}`;
+
+    if (errorText) {
+      try {
+        const payload = JSON.parse(errorText) as { message?: string };
+        message = payload.message ?? message;
+      } catch {
+        message = errorText;
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get("content-disposition") ?? "";
+  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  const filename = filenameMatch?.[1] ?? "lost-found-export.csv";
+
+  return { blob, filename };
+}
+
 export async function fetchModerationCaseById(id: string) {
   const response = await apiFetch<BackendApiResponse<BackendItem>>(
     `/api/lost-found/${id}`,
