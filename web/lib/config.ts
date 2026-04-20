@@ -1,4 +1,4 @@
-const DEFAULT_API_URL = "http://localhost:8000";
+const DEFAULT_API_URL = "http://localhost:3000/api";
 
 export function getApiUrl() {
   const baseUrl = process.env.API_URL ?? DEFAULT_API_URL;
