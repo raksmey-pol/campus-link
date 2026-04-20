@@ -5,6 +5,9 @@ import { CourseReview } from '../database/entities/course-review.entity';
 import { ReviewVote } from '../database/entities/review-vote.entity';
 import { CourseResource } from '../database/entities/course-resource.entity';
 import { ResourceVote } from '../database/entities/resource-vote.entity';
+import { CourseQuestion } from '../database/entities/course-question.entity';
+import { CourseAnswer } from '../database/entities/course-answer.entity';
+import { AnswerVote } from '../database/entities/answer-vote.entity';
 import { PointTransaction } from '../database/entities/point-transaction.entity';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
@@ -12,6 +15,13 @@ import { ReviewsController, ReviewVotesController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 import { ResourcesController, ResourceVotesController } from './resources.controller';
 import { ResourcesService } from './resources.service';
+import {
+  QuestionsController,
+  QuestionDetailController,
+  AnswersController,
+  AnswerModController,
+} from './qa.controller';
+import { QAService } from './qa.service';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -22,6 +32,9 @@ import { UsersModule } from '../users/users.module';
       ReviewVote,
       CourseResource,
       ResourceVote,
+      CourseQuestion,
+      CourseAnswer,
+      AnswerVote,
       PointTransaction,
     ]),
     UsersModule,
@@ -32,8 +45,12 @@ import { UsersModule } from '../users/users.module';
     ReviewVotesController,
     ResourcesController,
     ResourceVotesController,
+    QuestionsController,
+    QuestionDetailController,
+    AnswersController,
+    AnswerModController,
   ],
-  providers: [CoursesService, ReviewsService, ResourcesService],
-  exports: [CoursesService, ReviewsService, ResourcesService],
+  providers: [CoursesService, ReviewsService, ResourcesService, QAService],
+  exports: [CoursesService, ReviewsService, ResourcesService, QAService],
 })
 export class CoursesModule {}
