@@ -1,4 +1,18 @@
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const DEFAULT_PUBLIC_API_URL = "http://localhost:8000/api";
+
+function normalizeApiBaseUrl(baseUrl: string) {
+  const trimmed = baseUrl.trim().replace(/\/+$/, "");
+  const withProtocol =
+    /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed) || trimmed.startsWith("/")
+      ? trimmed
+      : `http://${trimmed}`;
+
+  return /\/api$/i.test(withProtocol) ? withProtocol : `${withProtocol}/api`;
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(
+  process.env.NEXT_PUBLIC_API_URL || DEFAULT_PUBLIC_API_URL,
+);
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, any>;
@@ -12,7 +26,7 @@ function snakeToCamel(str: string): string {
 function transformKeys(obj: any): any {
   if (Array.isArray(obj)) {
     return obj.map(transformKeys);
-  } else if (obj !== null && typeof obj === 'object') {
+  } else if (obj !== null && typeof obj === "object") {
     return Object.keys(obj).reduce((result, key) => {
       const camelKey = snakeToCamel(key);
       result[camelKey] = transformKeys(obj[key]);
@@ -43,7 +57,7 @@ async function apiCall(endpoint: string, options: RequestOptions = {}) {
   const response = await fetch(url, {
     ...fetchOptions,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...fetchOptions.headers,
     },
   });
@@ -57,8 +71,11 @@ async function apiCall(endpoint: string, options: RequestOptions = {}) {
 }
 
 export const coursesApi = {
-  listCourses: (params?: { q?: string; dept?: string; sort?: string; page?: number }) =>
-    apiCall('/courses', { params }),
-  getCourse: (id: number) =>
-    apiCall(`/courses/${id}`),
+  listCourses: (params?: {
+    q?: string;
+    dept?: string;
+    sort?: string;
+    page?: number;
+  }) => apiCall("/courses", { params }),
+  getCourse: (id: number) => apiCall(`/courses/${id}`),
 };

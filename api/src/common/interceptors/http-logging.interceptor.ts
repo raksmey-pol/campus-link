@@ -28,6 +28,17 @@ const SENSITIVE_KEYS = new Set([
   'jwt_refresh_secret',
 ]);
 
+function resolveResourceRoute(request: Request): string {
+  const routePath = request.route?.path;
+
+  if (typeof routePath === 'string') {
+    const normalizedBase = request.baseUrl ?? '';
+    return `${normalizedBase}${routePath}` || '/';
+  }
+
+  return request.path ?? request.url;
+}
+
 function truncateString(value: string): string {
   if (value.length <= MAX_STRING_LENGTH) {
     return value;
@@ -121,12 +132,18 @@ export class HttpLoggingInterceptor implements NestInterceptor {
 
     const startedAt = Date.now();
     const method = request.method;
-    const path = request.originalUrl ?? request.url;
+    const resourceRoute = resolveResourceRoute(request);
+    const requestPath = request.originalUrl ?? request.url;
 
     const requestLogPayload = {
-      params: sanitizeForLog(request.params),
-      query: sanitizeForLog(request.query),
-      body: sanitizeForLog(request.body),
+      method,
+      resourceRoute,
+      requestPath,
+      payload: sanitizeForLog({
+        params: request.params,
+        query: request.query,
+        body: request.body,
+      }),
       headers: sanitizeForLog({
         authorization: request.headers.authorization,
         'user-agent': request.headers['user-agent'],
@@ -134,23 +151,22 @@ export class HttpLoggingInterceptor implements NestInterceptor {
       }),
     };
 
-    this.logger.log(
-      `REQUEST ${method} ${path} ${JSON.stringify(requestLogPayload)}`,
-    );
+    this.logger.log(`REQUEST ${JSON.stringify(requestLogPayload)}`);
 
     return next.handle().pipe(
       tap({
         next: (data: unknown) => {
           const durationMs = Date.now() - startedAt;
           const responseLogPayload = {
+            method,
+            resourceRoute,
+            requestPath,
             statusCode: response.statusCode,
             durationMs,
-            body: sanitizeForLog(data),
+            response: sanitizeForLog(data),
           };
 
-          this.logger.log(
-            `RESPONSE ${method} ${path} ${JSON.stringify(responseLogPayload)}`,
-          );
+          this.logger.log(`RESPONSE ${JSON.stringify(responseLogPayload)}`);
         },
         error: (error: unknown) => {
           const durationMs = Date.now() - startedAt;
@@ -162,7 +178,10 @@ export class HttpLoggingInterceptor implements NestInterceptor {
               : error;
 
           this.logger.error(
-            `ERROR ${method} ${path} ${JSON.stringify({
+            `ERROR ${JSON.stringify({
+              method,
+              resourceRoute,
+              requestPath,
               statusCode,
               durationMs,
               error: sanitizeForLog(errorPayload),
