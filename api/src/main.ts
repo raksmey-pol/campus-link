@@ -10,10 +10,10 @@ async function bootstrap() {
   const uploadDir = process.env.LOCAL_UPLOAD_DIR ?? 'uploads';
   
   // Enable CORS for frontend development
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: true,
-  });
+app.enableCors({
+  origin: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+});
   
   // Set global API prefix
   app.setGlobalPrefix('api');
