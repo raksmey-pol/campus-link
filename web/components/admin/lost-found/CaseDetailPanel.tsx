@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  AlertCircle,
   CheckCircle2,
   Clock,
   ImageOff,
@@ -54,8 +53,6 @@ function ItemModerationView({
   CaseDetailPanelProps,
   "caseItem" | "moderationReason" | "errorMessage" | "onModerationReasonChange" | "onApproveItem" | "onRejectItem"
 >) {
-  const isFlagged = caseItem.aiStatus === "Flagged";
-
   return (
     <>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -63,41 +60,6 @@ function ItemModerationView({
           <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
             <ImageOff className="h-8 w-8" />
             <span className="text-[10px] font-medium uppercase tracking-wider">No image attached</span>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "rounded-lg border-l-4 p-3",
-            isFlagged ? "border-destructive bg-destructive/5" : "border-success bg-success/5",
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              {isFlagged ? (
-                <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-              ) : (
-                <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-              )}
-              <p className={cn("text-[10px] font-bold uppercase tracking-[0.1em]", isFlagged ? "text-destructive" : "text-success")}>
-                AI Pre-Screen: {caseItem.aiStatus}
-              </p>
-            </div>
-            <p className="text-[11px] font-semibold text-foreground">{caseItem.aiMatch}% Match</p>
-          </div>
-          <div className="mt-2 space-y-1.5 text-xs">
-            <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground">Object</span>
-              <span className="font-medium text-foreground">{caseItem.objectRecognition}</span>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground">Policy</span>
-              <span className={cn("font-medium", isFlagged ? "text-destructive" : "text-success")}>{caseItem.policyRisk}</span>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-muted-foreground">Location</span>
-              <span className="font-medium text-foreground">{caseItem.locationContext}</span>
-            </div>
           </div>
         </div>
 

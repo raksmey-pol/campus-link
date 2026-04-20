@@ -20,6 +20,7 @@ import {
 } from '../database/enums';
 import { CreateItemDto } from './dto/create-item.dto';
 import { CreateClaimDto } from './dto/create-claim.dto';
+import { ExportItemsCsvDto } from './dto/export-items-csv.dto';
 import { ListItemsDto } from './dto/list-items.dto';
 import { UpdateClaimStatusDto } from './dto/update-claim-status.dto';
 import { UpdateItemStatusDto } from './dto/update-item-status.dto';
@@ -133,6 +134,116 @@ export class LostFoundService {
         total_pages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async exportItemsCsv(query: ExportItemsCsvDto, requestingUser: User) {
+    const {
+      status,
+      search,
+      high_value_only = false,
+      claim_requests_only = false,
+      sort = 'created_at',
+    } = query;
+
+    const qb = this.itemsRepo
+      .createQueryBuilder('item')
+      .leftJoin('item.reporter', 'reporter')
+      .select([
+        'item.id',
+        'item.title',
+        'item.value_tier',
+        'item.status',
+        'item.location',
+        'item.created_at',
+        'reporter.id',
+        'reporter.display_name',
+      ]);
+
+    const canViewNonApproved =
+      requestingUser.role === UserRole.ADMIN ||
+      requestingUser.role === UserRole.MODERATOR;
+
+    if (!canViewNonApproved) {
+      qb.andWhere('item.status = :visibleStatus', {
+        visibleStatus: ItemStatus.APPROVED,
+      });
+    } else if (status) {
+      qb.andWhere('item.status = :status', { status });
+    }
+
+    if (high_value_only) {
+      qb.andWhere('item.value_tier IN (:...highValueTiers)', {
+        highValueTiers: [ValueTier.HIGH, ValueTier.VERY_HIGH],
+      });
+    }
+
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) {
+      qb.andWhere(
+        '(CAST(item.id AS TEXT) ILIKE :search OR item.title ILIKE :search OR reporter.display_name ILIKE :search)',
+        { search: `%${normalizedSearch}%` },
+      );
+    }
+
+    qb.orderBy(`item.${sort}`, 'DESC');
+
+    const items = await qb.getMany();
+    const claimSummaryByItemId = await this.getClaimSummariesByItemIds(
+      items.map((item) => item.id),
+    );
+
+    const exportItems = claim_requests_only
+      ? items.filter(
+          (item) =>
+            (claimSummaryByItemId.get(item.id)?.pending_claims ?? 0) > 0,
+        )
+      : items;
+
+    const headers = [
+      'Case ID',
+      'Item',
+      'Status',
+      'Value Tier',
+      'Priority',
+      'Location',
+      'Reporter',
+      'Submitted At',
+      'Total Claims',
+      'Pending Claims',
+      'Approved Claims',
+      'Rejected Claims',
+    ];
+
+    const rows = exportItems.map((item) => {
+      const claimSummary = claimSummaryByItemId.get(item.id);
+      const isHighPriority =
+        item.value_tier === ValueTier.HIGH ||
+        item.value_tier === ValueTier.VERY_HIGH;
+
+      return [
+        item.id,
+        item.title,
+        this.toModerationStatusLabel(item.status),
+        item.value_tier.replaceAll('_', ' '),
+        isHighPriority ? 'High Priority' : 'Normal Priority',
+        item.location,
+        item.reporter?.display_name ?? 'Campus Community',
+        this.formatDateForCsv(item.created_at),
+        claimSummary?.total_claims ?? 0,
+        claimSummary?.pending_claims ?? 0,
+        claimSummary?.approved_claims ?? 0,
+        claimSummary?.rejected_claims ?? 0,
+      ];
+    });
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((value) => this.escapeCsvCell(value)).join(','))
+      .join('\r\n');
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `lost-found-export-${timestamp}.csv`;
+
+    return { csv, filename };
   }
 
   // ==================================== Public item detail (location masked for guests) =====================================
@@ -691,6 +802,45 @@ export class LostFoundService {
       default:
         return 0;
     }
+  }
+
+  private toModerationStatusLabel(status: ItemStatus): string {
+    switch (status) {
+      case ItemStatus.PENDING:
+        return 'Pending';
+      case ItemStatus.APPROVED:
+        return 'Approved';
+      case ItemStatus.REJECTED:
+        return 'Rejected';
+      case ItemStatus.CLAIMED:
+        return 'Claimed';
+      case ItemStatus.RESOLVED:
+        return 'Resolved';
+      default:
+        return 'Pending';
+    }
+  }
+
+  private formatDateForCsv(value: Date | string | null | undefined): string {
+    if (!value) {
+      return '-';
+    }
+
+    const parsed = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '-';
+    }
+
+    return parsed.toLocaleDateString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric',
+    });
+  }
+
+  private escapeCsvCell(value: unknown): string {
+    const text = value == null ? '' : String(value);
+    return `"${text.replaceAll('"', '""')}"`;
   }
 
   private async announceApprovedItemToTelegram(item: Item): Promise<void> {
