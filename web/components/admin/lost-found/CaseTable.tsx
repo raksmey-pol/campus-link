@@ -14,14 +14,14 @@ type CaseTableProps = {
   pageSizeOptions: readonly number[];
   pageStart: number;
   pageEnd: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
+  onPageChangeAction: (page: number) => void;
+  onPageSizeChangeAction: (size: number) => void;
   selectedIds: string[];
   allVisibleSelected: boolean;
   activeCaseId: string | null;
-  onToggleSelect: (id: string) => void;
-  onToggleSelectAll: () => void;
-  onOpenCase: (id: string) => void;
+  onToggleSelectAction: (id: string) => void;
+  onToggleSelectAllAction: () => void;
+  onOpenCaseAction: (id: string) => void;
   isLoading: boolean;
 };
 
@@ -39,6 +39,8 @@ function tierClass(tier: string): string {
 const statusClass: Record<ModerationStatus, string> = {
   Pending: "bg-warning/20 text-warning",
   Approved: "bg-success/15 text-success",
+  Claimed: "bg-info/15 text-info",
+  Resolved: "bg-muted text-muted-foreground",
   Rejected: "bg-destructive/10 text-destructive",
 };
 
@@ -53,14 +55,14 @@ export function CaseTable({
   pageSizeOptions,
   pageStart,
   pageEnd,
-  onPageChange,
-  onPageSizeChange,
+  onPageChangeAction,
+  onPageSizeChangeAction,
   selectedIds,
   allVisibleSelected,
   activeCaseId,
-  onToggleSelect,
-  onToggleSelectAll,
-  onOpenCase,
+  onToggleSelectAction,
+  onToggleSelectAllAction,
+  onOpenCaseAction,
   isLoading,
 }: CaseTableProps) {
   return (
@@ -70,7 +72,7 @@ export function CaseTable({
           <thead className="sticky top-0 z-10 bg-muted/95 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground backdrop-blur">
             <tr>
               <th className="w-10 p-3">
-                <button type="button" onClick={onToggleSelectAll} aria-label="Select all visible cases">
+                <button type="button" onClick={onToggleSelectAllAction} aria-label="Select all visible cases">
                   {allVisibleSelected ? (
                     <CheckSquare className="h-4 w-4 text-primary" />
                   ) : (
@@ -109,11 +111,13 @@ export function CaseTable({
               : items.map((item) => {
                   const selected = selectedIds.includes(item.id);
                   const opened = activeCaseId === item.id;
+                  const pendingClaims = item.claimSummary?.pendingClaims ?? 0;
+                  const hasPendingClaims = pendingClaims > 0;
 
                   return (
                     <tr
                       key={item.id}
-                      onClick={() => onOpenCase(item.id)}
+                      onClick={() => onOpenCaseAction(item.id)}
                       className={cn(
                         "cursor-pointer border-t border-border text-xs transition-colors",
                         opened ? "bg-primary/8" : "hover:bg-muted/30",
@@ -122,7 +126,7 @@ export function CaseTable({
                       <td className="p-3 align-middle">
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); onToggleSelect(item.id); }}
+                          onClick={(e) => { e.stopPropagation(); onToggleSelectAction(item.id); }}
                           aria-label={`Select ${item.id}`}
                         >
                           {selected ? (
@@ -135,7 +139,14 @@ export function CaseTable({
                       <td className="p-3 align-middle text-[11px] font-semibold text-muted-foreground">{item.id}</td>
                       <td className="p-3 align-middle">
                         <p className="text-sm font-semibold text-foreground">{item.item}</p>
-                        <p className="text-[11px] text-muted-foreground">{item.location}</p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <p className="text-[11px] text-muted-foreground">{item.location}</p>
+                          {hasPendingClaims && (
+                            <span className="inline-flex items-center rounded-full bg-warning/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning">
+                              {pendingClaims} new claim request{pendingClaims > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 align-middle">
                         <span className={cn("inline-flex rounded px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em]", tierClass(item.tier))}>
@@ -170,10 +181,13 @@ export function CaseTable({
                         <Button
                           type="button"
                           variant="ghost"
-                          className="h-7 rounded-md px-2 text-xs text-primary"
-                          onClick={(e) => { e.stopPropagation(); onOpenCase(item.id); }}
+                          className={cn(
+                            "h-7 rounded-md px-2 text-xs",
+                            hasPendingClaims ? "text-warning hover:text-warning" : "text-primary",
+                          )}
+                          onClick={(e) => { e.stopPropagation(); onOpenCaseAction(item.id); }}
                         >
-                          Review
+                          {hasPendingClaims ? "Review Claims" : "Review"}
                         </Button>
                       </td>
                     </tr>
@@ -202,7 +216,7 @@ export function CaseTable({
               id="rows-per-page"
               className="h-7 rounded-md border border-border bg-background px-2 text-xs"
               value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              onChange={(e) => onPageSizeChangeAction(Number(e.target.value))}
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>{opt}</option>
@@ -213,7 +227,7 @@ export function CaseTable({
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+              onClick={() => onPageChangeAction(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1 || totalItems === 0}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -226,7 +240,7 @@ export function CaseTable({
               variant="outline"
               size="icon"
               className="h-7 w-7"
-              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+              onClick={() => onPageChangeAction(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages || totalItems === 0}
             >
               <ChevronRight className="h-3.5 w-3.5" />

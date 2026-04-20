@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { StorageModule } from './common/storage/storage.module';
 import { LostFoundModule } from './lost-found/lost-found.module';
+import { CoursesModule } from './courses/courses.module';
 import { SwapModule } from './swap/swap.module';
 
 @Module({
@@ -34,6 +35,7 @@ import { SwapModule } from './swap/swap.module';
     ScheduleModule.forRoot(),
     AuthModule,
     LostFoundModule,
+    CoursesModule,
     SwapModule,
   ],
   controllers: [AppController],
