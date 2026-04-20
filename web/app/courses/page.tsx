@@ -11,21 +11,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { coursesApi } from "@/lib/api";
-
-interface Course {
-  id: number;
-  code: string;
-  title: string;
-  department: string;
-  credits: number;
-  avgDifficulty?: number;
-  avgQuality?: number;
-  avgWorkload?: number;
-  avgUsefulness?: number;
-  reviewCount?: number;
-  description?: string;
-}
+import { fetchCourses, type Course } from "@/lib/services/courses";
 
 const mockCourses: Course[] = [
   { id: 1, code: "INFO 653", title: "Web Development III", department: "SDT", credits: 3, avgDifficulty: 3.8, avgQuality: 4.5, avgWorkload: 4.0, avgUsefulness: 4.7, reviewCount: 24 },
@@ -44,12 +30,12 @@ export default function Courses() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchCourses() {
+    async function loadCourses() {
       try {
         setLoading(true);
         setError(null);
-        const result = await coursesApi.listCourses({ page: 1 });
-        setCourses(result.data || mockCourses);
+        const result = await fetchCourses({ page: 1 });
+        setCourses(result.items || mockCourses);
       } catch (err) {
         console.error('Failed to fetch courses:', err);
         setError('Failed to load courses. Using sample data.');
@@ -59,7 +45,7 @@ export default function Courses() {
       }
     }
 
-    fetchCourses();
+    loadCourses();
   }, []);
 
   const filtered = courses.filter(
