@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -17,10 +17,18 @@ import {
 import { ApiFetchError } from "@/lib/fetch";
 import {
   fetchLostFoundFeedItemById,
+  submitItemClaim,
   type LostFoundFeedItem,
   type LostFoundFeedStatus,
 } from "@/lib/services/lost-found";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const statusChipClassByStatus: Record<LostFoundFeedStatus, string> = {
@@ -105,6 +113,15 @@ export default function LostFoundItemDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [requiresLogin, setRequiresLogin] = useState(false);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [proofDescription, setProofDescription] = useState("");
+  const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
+  const [claimErrorMessage, setClaimErrorMessage] = useState<string | null>(
+    null,
+  );
+  const [claimSuccessMessage, setClaimSuccessMessage] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!rawId || Number.isNaN(itemId)) {
@@ -119,6 +136,10 @@ export default function LostFoundItemDetail() {
       setIsLoading(true);
       setErrorMessage(null);
       setRequiresLogin(false);
+      setClaimDialogOpen(false);
+      setProofDescription("");
+      setClaimErrorMessage(null);
+      setClaimSuccessMessage(null);
 
       try {
         const payload = await fetchLostFoundFeedItemById(itemId);
@@ -161,6 +182,75 @@ export default function LostFoundItemDetail() {
     };
   }, [rawId, itemId]);
 
+  async function handleClaimSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!item) {
+      return;
+    }
+
+    if (!canClaim(item.status)) {
+      setClaimErrorMessage(
+        "This item is not currently available for claiming.",
+      );
+      return;
+    }
+
+    const normalizedProof = proofDescription.trim();
+    if (normalizedProof.length < 10) {
+      setClaimErrorMessage(
+        "Please provide at least 10 characters of ownership proof.",
+      );
+      return;
+    }
+
+    setIsSubmittingClaim(true);
+    setClaimErrorMessage(null);
+    setClaimSuccessMessage(null);
+
+    try {
+      await submitItemClaim(item.id, normalizedProof);
+
+      setClaimDialogOpen(false);
+      setProofDescription("");
+      setClaimSuccessMessage(
+        "Claim submitted. The finder will review your request.",
+      );
+      setItem((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          claimSummary: {
+            ...current.claimSummary,
+            totalClaims: current.claimSummary.totalClaims + 1,
+            pendingClaims: current.claimSummary.pendingClaims + 1,
+            latestClaimSubmittedAt: new Date().toISOString(),
+          },
+        };
+      });
+    } catch (error) {
+      if (
+        error instanceof ApiFetchError &&
+        (error.status === 401 || error.status === 403)
+      ) {
+        setRequiresLogin(true);
+        setClaimDialogOpen(false);
+        return;
+      }
+
+      setClaimErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to submit your claim right now.",
+      );
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  }
+
   const steps = useMemo(() => {
     if (!item) {
       return null;
@@ -168,6 +258,9 @@ export default function LostFoundItemDetail() {
 
     return timelineState(item.status);
   }, [item]);
+
+  const proofCharacterCount = proofDescription.trim().length;
+  const canSubmitClaimForm = !isSubmittingClaim && proofCharacterCount >= 10;
 
   if (isLoading) {
     return (
@@ -346,14 +439,81 @@ export default function LostFoundItemDetail() {
               verification details.
             </p>
             <Button
+              type="button"
               className="mt-5 h-12 w-full rounded-2xl bg-warning text-warning-foreground hover:bg-warning/90 disabled:bg-primary-foreground/20 disabled:text-primary-foreground/70"
-              disabled={!canClaim(item.status)}
+              disabled={!canClaim(item.status) || isSubmittingClaim}
+              onClick={() => {
+                setClaimErrorMessage(null);
+                setClaimSuccessMessage(null);
+                setClaimDialogOpen(true);
+              }}
             >
               <ShieldCheck className="mr-2 h-5 w-5" />
               {claimButtonText(item.status)}
             </Button>
+
+            {claimSuccessMessage ? (
+              <p className="mt-3 rounded-xl border border-primary-foreground/40 bg-primary-foreground/10 px-3 py-2 text-sm text-primary-foreground">
+                {claimSuccessMessage}
+              </p>
+            ) : null}
           </div>
         </section>
+
+        <Dialog
+          open={claimDialogOpen}
+          onOpenChange={(open) => {
+            setClaimDialogOpen(open);
+            if (!open) {
+              setClaimErrorMessage(null);
+            }
+          }}
+        >
+          <DialogContent className="rounded-2xl sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Submit Claim for {item.title}</DialogTitle>
+            </DialogHeader>
+
+            <form className="space-y-4 pt-1" onSubmit={handleClaimSubmit}>
+              <p className="text-sm text-muted-foreground">
+                Share proof details only the real owner would know, such as
+                identifying marks, contents, or where you lost it.
+              </p>
+
+              <Textarea
+                value={proofDescription}
+                onChange={(event) => setProofDescription(event.target.value)}
+                className="min-h-[130px] rounded-xl"
+                placeholder="Example: It has my initials on the inside pocket and a red keychain attached."
+                disabled={isSubmittingClaim}
+              />
+
+              <p className="text-xs text-muted-foreground">
+                {proofCharacterCount}/10+ characters required
+              </p>
+
+              {claimErrorMessage ? (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {claimErrorMessage}
+                </div>
+              ) : null}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setClaimDialogOpen(false)}
+                  disabled={isSubmittingClaim}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={!canSubmitClaimForm}>
+                  {isSubmittingClaim ? "Submitting..." : "Submit Claim"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {steps ? (
           <section className="rounded-3xl bg-card p-5 shadow-card sm:p-6">
