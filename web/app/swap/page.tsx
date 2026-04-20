@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CourseSelect } from "@/components/CourseSelect";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -60,10 +61,11 @@ const createSwapSchema = z
     swap_type: z.enum(["SECTION", "COURSE"]),
     current_course_id: z.coerce.number().min(1, "Required"),
     current_section: z.string().max(10).optional(),
-    desired_course_id: z.preprocess(
-      (v) => (v === "" || v === 0 || v === "0" ? undefined : v),
-      z.coerce.number().min(1).optional(),
-    ),
+    // desired_course_id: z.preprocess(
+    //   (v) => (v === "" || v === 0 || v === "0" ? undefined : v),
+    //   z.coerce.number().min(1).optional(),
+    // ),
+    desired_course_id: z.number().optional(),
     desired_section: z.string().max(10).optional(),
     notes: z.string().max(500).optional(),
   })
@@ -315,11 +317,12 @@ function CreateSwapDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Current Course ID</Label>
-              <Input
-                type="number"
-                placeholder="e.g., 1"
-                className="mt-1.5 rounded-xl"
-                {...register("current_course_id")}
+              <CourseSelect
+                value={watch("current_course_id")}
+                onChange={(courseId) =>
+                  setValue("current_course_id", courseId, { shouldValidate: true })
+                }
+                placeholder="Select current course"
               />
               {errors.current_course_id && (
                 <p className="text-[11px] text-destructive mt-1">{errors.current_course_id.message}</p>
@@ -340,11 +343,12 @@ function CreateSwapDialog({
             {swapType === "COURSE" && (
               <div>
                 <Label>Desired Course ID</Label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 2"
-                  className="mt-1.5 rounded-xl"
-                  {...register("desired_course_id")}
+                <CourseSelect
+                  value={watch("desired_course_id")}
+                  onChange={(courseId) =>
+                    setValue("desired_course_id", courseId, { shouldValidate: true })
+                  }
+                  placeholder="Select desired course"
                 />
                 {errors.desired_course_id && (
                   <p className="text-[11px] text-destructive mt-1">{errors.desired_course_id.message}</p>
