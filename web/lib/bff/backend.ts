@@ -43,6 +43,13 @@ function buildForwardHeaders(request: NextRequest, hasJsonBody: boolean) {
   return headers;
 }
 
+type ProxyFileOptions = {
+  request: NextRequest;
+  method: "GET";
+  path: string;
+  searchParams?: URLSearchParams;
+};
+
 export async function proxyBackendJson({
   request,
   method,
@@ -127,6 +134,56 @@ export async function proxyBackendFormData({
     }
 
     return NextResponse.json(payload, { status: response.status });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unexpected BFF proxy error";
+    return NextResponse.json(
+      {
+        success: false,
+        message,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function proxyBackendFile({
+  request,
+  method,
+  path,
+  searchParams,
+}: ProxyFileOptions) {
+  try {
+    const backendBaseUrl = getApiUrl();
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    const queryString = searchParams?.toString();
+    const targetUrl = `${backendBaseUrl}${normalizedPath}${queryString ? `?${queryString}` : ""}`;
+
+    const headers = buildForwardHeaders(request, false);
+    headers.set("accept", "text/csv,application/json");
+
+    const response = await fetch(targetUrl, {
+      method,
+      headers,
+      cache: "no-store",
+    });
+
+    const passthroughHeaders = new Headers();
+    const contentType = response.headers.get("content-type");
+    const contentDisposition = response.headers.get("content-disposition");
+
+    if (contentType) {
+      passthroughHeaders.set("content-type", contentType);
+    }
+    if (contentDisposition) {
+      passthroughHeaders.set("content-disposition", contentDisposition);
+    }
+
+    const body = await response.arrayBuffer();
+    return new NextResponse(body, {
+      status: response.status,
+      headers: passthroughHeaders,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unexpected BFF proxy error";

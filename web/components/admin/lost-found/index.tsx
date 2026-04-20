@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { moderationQueue } from "@/components/admin/mock-data";
 import type { BackendClaim, ModerationCase, ModerationStatus } from "@/components/admin/types";
 import {
+  exportModerationCasesCsv,
   fetchItemClaims,
   fetchModerationCaseById,
   fetchModerationCases,
@@ -126,6 +127,11 @@ export function LostFoundWorkspace() {
   const activeCase = useMemo(
     () => items.find((item) => item.id === activeCaseId) ?? null,
     [items, activeCaseId],
+  );
+
+  const hasApprovedSelection = useMemo(
+    () => items.some((item) => selectedIds.includes(item.id) && item.status === "Approved"),
+    [items, selectedIds],
   );
 
   const tabCounts = useMemo<Record<LostFoundTab, number>>(() => ({
@@ -263,6 +269,41 @@ export function LostFoundWorkspace() {
     }
   };
 
+  const handleExportCsv = () => {
+    if (filteredItems.length === 0) {
+      setActionError("No cases available to export for the current filters");
+      return;
+    }
+
+    void (async () => {
+      setActionError(null);
+      try {
+        const status =
+          activeTab !== "All" && activeTab !== "Claim Requests"
+            ? (activeTab.toUpperCase() as "PENDING" | "APPROVED" | "REJECTED" | "CLAIMED" | "RESOLVED")
+            : undefined;
+
+        const { blob, filename } = await exportModerationCasesCsv({
+          status,
+          search: query,
+          highValueOnly,
+          claimRequestsOnly: activeTab === "Claim Requests",
+        });
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(downloadUrl);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : "Failed to export CSV");
+      }
+    })();
+  };
+
   return (
     <AdminShell active="lost-found" title="Lost & Found — Moderation Queue">
       <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col gap-4">
@@ -275,6 +316,8 @@ export function LostFoundWorkspace() {
           onQueryChangeAction={setQuery}
           highValueOnly={highValueOnly}
           onHighValueOnlyChangeAction={setHighValueOnly}
+          onExportCsvAction={() => handleExportCsv()}
+          isExportDisabled={isLoading || filteredItems.length === 0}
         />
 
         {claimRequestCount > 0 && activeTab !== "Claim Requests" && (
@@ -347,11 +390,13 @@ export function LostFoundWorkspace() {
           )}
         </section>
 
-        <BulkActionBar
-          selectedCount={selectedIds.length}
-          onApproveSelected={() => void updateItemStatuses(selectedIds, "Approved")}
-          onRejectSelected={() => void updateItemStatuses(selectedIds, "Rejected")}
-        />
+        {!hasApprovedSelection && (
+          <BulkActionBar
+            selectedCount={selectedIds.length}
+            onApproveSelected={() => void updateItemStatuses(selectedIds, "Approved")}
+            onRejectSelected={() => void updateItemStatuses(selectedIds, "Rejected")}
+          />
+        )}
       </div>
     </AdminShell>
   );
