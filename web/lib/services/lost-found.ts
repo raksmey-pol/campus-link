@@ -105,16 +105,13 @@ type FetchLostFoundFeedOptions = {
   location?: string;
 };
 
-const DEFAULT_PUBLIC_API_URL = "http://localhost:8000";
-
-function getPublicApiBaseUrl() {
-  const raw =
-    process.env.NEXT_PUBLIC_API_URL ??
-    process.env.NEXT_PUBLIC_API_BASE_URL ??
-    DEFAULT_PUBLIC_API_URL;
-
-  return raw.replace(/\/+$/, "");
-}
+export type CreateLostFoundItemPayload = {
+  title: string;
+  description: string;
+  location: string;
+  valueTier: LostFoundValueTier;
+  photo: File;
+};
 
 function toPublicPhotoUrl(photoUrl?: string | null) {
   if (!photoUrl) {
@@ -126,7 +123,10 @@ function toPublicPhotoUrl(photoUrl?: string | null) {
   }
 
   const normalizedPath = photoUrl.startsWith("/") ? photoUrl : `/${photoUrl}`;
-  return `${getPublicApiBaseUrl()}${normalizedPath}`;
+
+  // Serve uploaded assets through a same-origin proxy route so image URLs
+  // stay valid even when API base URLs include /api or vary by environment.
+  return `/api/media${normalizedPath}`;
 }
 
 function normalizeValueTier(valueTier: string): LostFoundValueTier {
@@ -333,6 +333,27 @@ export async function fetchLostFoundFeedItemById(id: number | string) {
   return mapBackendItemToFeedItem(response.data);
 }
 
+export async function createLostFoundItem(
+  payload: CreateLostFoundItemPayload,
+): Promise<LostFoundFeedItem> {
+  const formData = new FormData();
+  formData.append("title", payload.title.trim());
+  formData.append("description", payload.description.trim());
+  formData.append("location", payload.location.trim());
+  formData.append("value_tier", payload.valueTier);
+  formData.append("photo", payload.photo);
+
+  const response = await apiFetch<BackendApiResponse<BackendItem>>(
+    "/api/lost-found",
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+
+  return mapBackendItemToFeedItem(response.data);
+}
+
 export async function fetchModerationCases() {
   const response =
     await apiFetch<BackendApiResponse<BackendItem[]>>("/api/lost-found");
@@ -365,6 +386,18 @@ export async function patchModerationCaseStatus(
   await apiFetch(`/api/lost-found/${id}`, {
     method: "PATCH",
     body: payload,
+  });
+}
+
+export async function submitItemClaim(
+  itemId: number | string,
+  proofDescription: string,
+): Promise<void> {
+  await apiFetch(`/api/lost-found/${itemId}/claims`, {
+    method: "POST",
+    body: {
+      proof_description: proofDescription,
+    },
   });
 }
 
