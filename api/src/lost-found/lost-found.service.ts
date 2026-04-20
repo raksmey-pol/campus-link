@@ -552,6 +552,36 @@ export class LostFoundService {
     });
   }
 
+  // =========================== Mod/Admin: list claims for an item ================================
+
+  async listItemClaims(itemId: number) {
+    const item = await this.itemsRepo.findOne({ where: { id: itemId } });
+
+    if (!item) {
+      throw new NotFoundException('Item not found');
+    }
+
+    const claims = await this.claimsRepo.find({
+      where: { item: { id: itemId } },
+      relations: { claimer: true },
+      order: { created_at: 'DESC' },
+    });
+
+    return claims.map((claim) => ({
+      id: claim.id,
+      claimer: {
+        id: claim.claimer.id,
+        display_name: claim.claimer.display_name,
+        avatar_url: claim.claimer.avatar_url,
+      },
+      proof_description: claim.proof_description,
+      status: claim.status,
+      rejection_reason: claim.rejection_reason,
+      reviewed_at: claim.reviewed_at,
+      created_at: claim.created_at,
+    }));
+  }
+
   // =========================== Admin: hard delete ================================
 
   async deleteItem(id: number) {
