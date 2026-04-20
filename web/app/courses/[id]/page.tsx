@@ -13,21 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { coursesApi } from "@/lib/api";
-
-interface Course {
-  id: number;
-  code: string;
-  title: string;
-  department: string;
-  credits: number;
-  avgDifficulty?: number;
-  avgQuality?: number;
-  avgWorkload?: number;
-  avgUsefulness?: number;
-  reviewCount?: number;
-  description?: string;
-}
+import { fetchCourseById, type Course } from "@/lib/services/courses";
 
 interface Review {
   id: number;
@@ -78,11 +64,11 @@ export default function CourseDetail() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchCourse() {
+    async function loadCourse() {
       try {
         setLoading(true);
         setError(null);
-        const data = await coursesApi.getCourse(parseInt(id, 10));
+        const data = await fetchCourseById(id);
         setCourse(data);
       } catch (err) {
         console.error('Failed to fetch course:', err);
@@ -93,7 +79,7 @@ export default function CourseDetail() {
     }
 
     if (id) {
-      fetchCourse();
+      loadCourse();
     }
   }, [id]);
 
