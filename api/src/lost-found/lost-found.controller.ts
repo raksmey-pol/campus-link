@@ -120,6 +120,16 @@ export class LostFoundController {
     return ok(item, { message: 'Found item report submitted successfully' });
   }
 
+  // =========================== GET /items/:id/claims ==================================
+  //  Moderator/Admin: list all claims for an item with claimer details.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MODERATOR, UserRole.ADMIN)
+  @Get(':id/claims')
+  async listItemClaims(@Param('id', ParseIntPipe) id: number) {
+    const claims = await this.itemsService.listItemClaims(id);
+    return ok(claims, { message: 'Claims retrieved successfully' });
+  }
+
   // =========================== POST /items/:id/claims ====================================
   //  Submit claim form for an approved item (authenticated users only).
   @UseGuards(JwtAuthGuard)
