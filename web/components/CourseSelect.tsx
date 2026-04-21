@@ -24,15 +24,18 @@ type CourseOption = {
   title: string;
 };
 
-// 🔌 connect to your backend
+// connect to the backend
 async function fetchCourseOptions(query: string): Promise<CourseOption[]> {
   const url = query
     ? `/api/courses?q=${encodeURIComponent(query)}`
-    : `/api/courses`; // fallback
-
+    : `/api/courses`;
   const res = await fetch(url);
   const data = await res.json();
-  return data.data ?? data;
+  // Handle double-nested: { success, data: { data: [], meta: {} } }
+  const inner = data.data;
+  if (Array.isArray(inner)) return inner;
+  if (Array.isArray(inner?.data)) return inner.data;
+  return [];
 }
 
 export function CourseSelect({
