@@ -18,7 +18,7 @@ export class CreateCourseDto {
   @IsString()
   @MinLength(1)
   @MaxLength(100)
-  department!: string;
+  department!: string;  
 
   @IsOptional()
   @IsString()

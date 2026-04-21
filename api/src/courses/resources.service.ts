@@ -65,6 +65,16 @@ export class ResourcesService {
   }
 
   /**
+   * Get a single resource by ID (for download endpoint)
+   */
+  async getResourceById(resourceId: number): Promise<CourseResource | null> {
+    return this.resourceRepository.findOne({
+      where: { id: resourceId },
+      relations: ['user'],
+    });
+  }
+
+  /**
    * Create a new resource (enters moderation queue)
    */
   async uploadResource(
@@ -79,7 +89,7 @@ export class ResourcesService {
       throw new NotFoundException(`Course with id ${courseId} not found`);
     }
 
-    // Validate that at least one URL is provided
+    // Validate that required URLs are provided based on type
     if (dto.type === ResourceType.EXTERNAL_LINK && !dto.link_url) {
       throw new BadRequestException('External links must have a link_url');
     }
@@ -88,9 +98,10 @@ export class ResourcesService {
       [ResourceType.NOTES, ResourceType.PAST_ASSESSMENT, ResourceType.PROJECT_EXAMPLE].includes(
         dto.type,
       ) &&
-      !fileUrl
+      !fileUrl &&
+      !dto.file_url
     ) {
-      throw new BadRequestException(`${dto.type} resources require a file upload`);
+      throw new BadRequestException(`${dto.type} resources require a file upload or file_url`);
     }
 
     const resource = this.resourceRepository.create({
@@ -99,7 +110,7 @@ export class ResourcesService {
       type: dto.type,
       title: dto.title,
       description: dto.description || null,
-      file_url: fileUrl || null,
+      file_url: fileUrl || dto.file_url || null,
       link_url: dto.link_url || null,
       status: ResourceStatus.PENDING,
       upvotes: 0,

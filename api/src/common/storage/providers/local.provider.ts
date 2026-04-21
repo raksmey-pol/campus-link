@@ -62,16 +62,40 @@ export class LocalStorageProvider extends StorageService {
   }
 
   private extensionFromMime(mimeType: string): string {
-    switch (mimeType) {
-      case 'image/jpeg':
-      case 'image/jpg':
-        return '.jpg';
-      case 'image/png':
-        return '.png';
-      case 'image/webp':
-        return '.webp';
-      default:
-        return '';
-    }
+    const mimeMap: Record<string, string> = {
+      // Images
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp',
+      'image/gif': '.gif',
+      'image/svg+xml': '.svg',
+      // Documents
+      'application/pdf': '.pdf',
+      'application/msword': '.doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'application/vnd.ms-excel': '.xls',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+      'application/vnd.ms-powerpoint': '.ppt',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+      'text/plain': '.txt',
+      'text/csv': '.csv',
+      'application/json': '.json',
+      'application/zip': '.zip',
+      'application/x-rar-compressed': '.rar',
+      'application/x-7z-compressed': '.7z',
+      // Archives
+      'application/gzip': '.gz',
+      'application/x-tar': '.tar',
+      // Media
+      'video/mp4': '.mp4',
+      'video/mpeg': '.mpeg',
+      'video/quicktime': '.mov',
+      'audio/mpeg': '.mp3',
+      'audio/wav': '.wav',
+      'audio/ogg': '.ogg',
+    };
+
+    return mimeMap[mimeType] || '';
   }
 }

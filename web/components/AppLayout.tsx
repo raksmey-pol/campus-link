@@ -22,6 +22,7 @@ const navItems = [
   { icon: Search, label: "Lost", path: "/lost-found" },
   { icon: BookOpen, label: "Courses", path: "/courses" },
   { icon: ArrowLeftRight, label: "Swap", path: "/swap" },
+  { icon: User, label: "Profile", path: "/profile" },
 ];
 
 type AuthMeResponse = {
@@ -56,7 +57,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const abortController = new AbortController();
+    let isMounted = true;
 
     async function loadCurrentUser() {
       try {
@@ -65,30 +66,42 @@ export function AppLayout({ children }: { children: ReactNode }) {
           headers: { accept: "application/json" },
           cache: "no-store",
           credentials: "same-origin",
-          signal: abortController.signal,
         });
 
         if (!response.ok) {
-          setUserProfile(null);
+          if (isMounted) {
+            setUserProfile(null);
+          }
           return;
         }
 
         const payload = (await response
           .json()
           .catch(() => null)) as AuthMeResponse | null;
-        setUserProfile(payload?.user ?? null);
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
+        if (isMounted) {
+          setUserProfile(payload?.user ?? null);
         }
-
-        setUserProfile(null);
+      } catch {
+        if (isMounted) {
+          setUserProfile(null);
+        }
       }
     }
 
-    loadCurrentUser();
+    const refreshUserProfile = () => {
+      void loadCurrentUser();
+    };
 
-    return () => abortController.abort();
+    refreshUserProfile();
+
+    const refreshIntervalId = window.setInterval(refreshUserProfile, 60_000);
+    window.addEventListener("focus", refreshUserProfile);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(refreshIntervalId);
+      window.removeEventListener("focus", refreshUserProfile);
+    };
   }, []);
 
   const isAuthenticated = Boolean(userProfile);
@@ -219,7 +232,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
               <Award className="h-3.5 w-3.5" />
-              <span>120</span>
+              <span>{userProfile?.civicPoints ?? 0}</span>
             </div>
             <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface text-muted-foreground">
               <Bell className="h-4.5 w-4.5" />

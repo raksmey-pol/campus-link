@@ -18,6 +18,7 @@ export class CreateResourceDto {
   @IsUrl()
   link_url?: string;
 
-  // File upload handled separately via multer middleware
-  // file?: Express.Multer.File;
+  @IsOptional()
+  @IsUrl()
+  file_url?: string;
 }

@@ -74,9 +74,9 @@ export default function RegisterPage() {
 				<p className="mt-3 text-center text-[10px] text-slate-400">or continue with</p>
 
 				<div className="mt-2 flex items-center justify-center gap-3">
-					<button type="button" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Continue with Google">
+					<a href="/api/auth/google/start" className="rounded-full p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Continue with Google">
 						<Chrome className="h-3.5 w-3.5" />
-					</button>
+					</a>
 					<button type="button" className="rounded-full p-1.5 text-sky-600 hover:bg-sky-50" aria-label="Continue with Facebook">
 						<Facebook className="h-3.5 w-3.5" />
 					</button>
