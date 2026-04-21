@@ -1,6 +1,6 @@
 "use client";
 
-import { Filter, Search } from "lucide-react";
+import { Download, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,8 @@ type FilterBarProps = {
   onQueryChangeAction: (query: string) => void;
   highValueOnly: boolean;
   onHighValueOnlyChangeAction: (value: boolean) => void;
+  onExportCsvAction: () => void;
+  isExportDisabled?: boolean;
 };
 
 export function FilterBar({
@@ -28,6 +30,8 @@ export function FilterBar({
   onQueryChangeAction,
   highValueOnly,
   onHighValueOnlyChangeAction,
+  onExportCsvAction,
+  isExportDisabled = false,
 }: FilterBarProps) {
   return (
     <section className="flex flex-wrap items-center justify-between gap-2">
@@ -70,6 +74,17 @@ export function FilterBar({
         >
           <Filter className="mr-1.5 h-3.5 w-3.5" />
           {highValueOnly ? "High Value Only" : "All Value Tiers"}
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          className="h-8 rounded-md px-3 text-xs"
+          onClick={onExportCsvAction}
+          disabled={isExportDisabled}
+        >
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          Export CSV
         </Button>
       </div>
     </section>

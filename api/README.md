@@ -149,6 +149,17 @@ Base path: /auth
   - Body:
     - idToken
 
+OAuth setup notes:
+
+- Create a Google OAuth Web application in Google Cloud Console.
+- Set Authorized JavaScript origins (example):
+  - http://localhost:3000
+- Set Authorized redirect URIs (example):
+  - http://localhost:3000/api/auth/google/callback
+- Configure env values:
+  - API `.env`: `GOOGLE_CLIENT_ID`
+  - WEB `.env`: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+
 ### Token Lifecycle
 
 - POST /auth/refresh
