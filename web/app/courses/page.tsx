@@ -35,7 +35,7 @@ export default function Courses() {
         setLoading(true);
         setError(null);
         const result = await fetchCourses({ page: 1 });
-        setCourses(result.items || mockCourses);
+        setCourses(result.data || mockCourses);
       } catch (err) {
         console.error('Failed to fetch courses:', err);
         setError('Failed to load courses. Using sample data.');
@@ -113,9 +113,9 @@ export default function Courses() {
                     <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-warning fill-warning" />
-                        {course.avgQuality ?? 0}
+                        {course.avg_quality ?? course.avgQuality ?? 0}
                       </span>
-                      <span>{course.reviewCount ?? 0} reviews</span>
+                      <span>{course.review_count ?? course.reviewCount ?? 0} reviews</span>
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

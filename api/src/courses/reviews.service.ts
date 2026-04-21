@@ -141,13 +141,54 @@ export class ReviewsService {
       where: { review: { id: reviewId }, user: { id: userId } },
     });
 
-    if (existingVote) {
-      throw new BadRequestException(
-        'You have already voted on this review',
+    // If voting the same way again, remove the vote (unvote)
+    if (existingVote && existingVote.is_helpful === dto.is_helpful) {
+      console.log(
+        `[ReviewsService] User ${userId} unvoting review ${reviewId} (was ${dto.is_helpful})`,
       );
+
+      // Delete the vote
+      await this.reviewVoteRepository.remove(existingVote);
+
+      // Only helpful votes affect the count
+      if (dto.is_helpful) {
+        review.helpfulness_votes = Math.max(0, review.helpfulness_votes - 1);
+      }
+
+      await this.reviewRepository.save(review);
+
+      return existingVote;
     }
 
-    // Create vote
+    // If changing vote type
+    if (existingVote && existingVote.is_helpful !== dto.is_helpful) {
+      console.log(
+        `[ReviewsService] User ${userId} changing vote on review ${reviewId} from ${existingVote.is_helpful} to ${dto.is_helpful}`,
+      );
+
+      // Only helpful votes affect the count, so only adjust if changing to/from helpful
+      if (existingVote.is_helpful && !dto.is_helpful) {
+        // Was helpful, now unhelpful → decrement count
+        review.helpfulness_votes = Math.max(0, review.helpfulness_votes - 1);
+      } else if (!existingVote.is_helpful && dto.is_helpful) {
+        // Was unhelpful, now helpful → increment count
+        review.helpfulness_votes += 1;
+      }
+
+      // Update vote type
+      existingVote.is_helpful = dto.is_helpful;
+      const updatedVote = await this.reviewVoteRepository.save(existingVote);
+
+      await this.reviewRepository.save(review);
+
+      return updatedVote;
+    }
+
+    // Create new vote (no existing vote)
+    console.log(
+      `[ReviewsService] User ${userId} voting on review ${reviewId} as helpful=${dto.is_helpful}`,
+    );
+
     const vote = this.reviewVoteRepository.create({
       review: { id: reviewId },
       user: { id: userId },
@@ -156,16 +197,55 @@ export class ReviewsService {
 
     const savedVote = await this.reviewVoteRepository.save(vote);
 
-    // Update review helpfulness count
+    // Only helpful votes affect the count
     if (dto.is_helpful) {
       review.helpfulness_votes += 1;
-    } else {
-      review.helpfulness_votes = Math.max(0, review.helpfulness_votes - 1);
     }
 
     await this.reviewRepository.save(review);
 
     return savedVote;
+  }
+
+  /**
+   * Remove user's vote from a review (unvote)
+   */
+  async unvoteReview(
+    reviewId: number,
+    userId: number,
+  ): Promise<{ message: string }> {
+    // Verify review exists
+    const review = await this.reviewRepository.findOne({
+      where: { id: reviewId },
+    });
+    if (!review) {
+      throw new NotFoundException(`Review with id ${reviewId} not found`);
+    }
+
+    // Find existing vote
+    const existingVote = await this.reviewVoteRepository.findOne({
+      where: { review: { id: reviewId }, user: { id: userId } },
+    });
+
+    if (!existingVote) {
+      throw new BadRequestException(
+        'You have not voted on this review',
+      );
+    }
+
+    // Delete the vote
+    await this.reviewVoteRepository.remove(existingVote);
+
+    // Update review helpfulness count
+    if (existingVote.is_helpful) {
+      review.helpfulness_votes = Math.max(0, review.helpfulness_votes - 1);
+    } else {
+      review.helpfulness_votes += 1;
+    }
+
+    await this.reviewRepository.save(review);
+
+    return { message: 'Vote removed successfully' };
   }
 
   /**
@@ -185,13 +265,20 @@ export class ReviewsService {
     }
 
     const previousStatus = review.status;
+    console.log('[ReviewsService] updateReviewStatus: review', reviewId, 'previousStatus:', previousStatus, 'newStatus:', dto.status);
+    
     review.status = dto.status;
+
+    // Save the review status change FIRST
+    const savedReview = await this.reviewRepository.save(review);
+    console.log('[ReviewsService] Review saved with status:', savedReview.status);
 
     // If approving, recalculate course aggregates and award civic points
     if (
       dto.status === ReviewStatus.APPROVED &&
       previousStatus !== ReviewStatus.APPROVED
     ) {
+      console.log('[ReviewsService] Recalculating aggregates for course', review.course.id);
       await this.recalculateCourseAggregates(review.course.id);
 
       // Award civic points to reviewer
@@ -209,10 +296,11 @@ export class ReviewsService {
       dto.status === ReviewStatus.REJECTED &&
       previousStatus === ReviewStatus.APPROVED
     ) {
+      console.log('[ReviewsService] Recalculating aggregates for course', review.course.id);
       await this.recalculateCourseAggregates(review.course.id);
     }
 
-    return this.reviewRepository.save(review);
+    return savedReview;
   }
 
   /**
@@ -228,28 +316,44 @@ export class ReviewsService {
       throw new NotFoundException(`Review with id ${reviewId} not found`);
     }
 
-    // Recalculate aggregates if review was approved
-    if (review.status === ReviewStatus.APPROVED) {
-      await this.recalculateCourseAggregates(review.course.id);
-    }
+    const courseId = review.course.id;
+    const wasApproved = review.status === ReviewStatus.APPROVED;
 
+    // Delete the review
     await this.reviewRepository.remove(review);
+
+    // Then recalculate aggregates if review was approved
+    // This ensures the deleted review is not counted
+    if (wasApproved) {
+      await this.recalculateCourseAggregates(courseId);
+    }
   }
 
   /**
    * Recalculate course aggregate scores from approved reviews
    */
   private async recalculateCourseAggregates(courseId: number): Promise<void> {
-    const approvedReviews = await this.reviewRepository.find({
-      where: {
-        course: { id: courseId },
-        status: ReviewStatus.APPROVED,
-      },
-    });
+    // Use raw query to ensure proper numeric type handling from PostgreSQL
+    const result = await this.reviewRepository
+      .createQueryBuilder('review')
+      .where('review.course_id = :courseId', { courseId })
+      .andWhere('review.status = :status', { status: ReviewStatus.APPROVED })
+      .select('COUNT(*)', 'count')
+      .addSelect('AVG(CAST(review.difficulty AS FLOAT))', 'avgDifficulty')
+      .addSelect('AVG(CAST(review.workload_hours AS FLOAT))', 'avgWorkload')
+      .addSelect('AVG(CAST(review.quality AS FLOAT))', 'avgQuality')
+      .addSelect('AVG(CAST(review.usefulness AS FLOAT))', 'avgUsefulness')
+      .addSelect('AVG(CAST(review.recommendation AS FLOAT))', 'avgRecommendation')
+      .getRawOne();
 
-    if (approvedReviews.length === 0) {
+    console.log('[ReviewsService] Raw SQL result for course', courseId, result);
+
+    const count = parseInt(result?.count || '0', 10);
+
+    if (count === 0) {
+      console.log('[ReviewsService] No approved reviews, resetting aggregates for course', courseId);
       // Reset aggregates
-      await this.courseRepository.update(
+      const updateResult = await this.courseRepository.update(
         { id: courseId },
         {
           avg_difficulty: 0,
@@ -260,26 +364,26 @@ export class ReviewsService {
           review_count: 0,
         },
       );
+      console.log('[ReviewsService] Reset update result:', updateResult);
       return;
     }
 
-    const avgDifficulty =
-      approvedReviews.reduce((sum, r) => sum + r.difficulty, 0) /
-      approvedReviews.length;
-    const avgWorkload =
-      approvedReviews.reduce((sum, r) => sum + r.workload_hours, 0) /
-      approvedReviews.length;
-    const avgQuality =
-      approvedReviews.reduce((sum, r) => sum + r.quality, 0) /
-      approvedReviews.length;
-    const avgUsefulness =
-      approvedReviews.reduce((sum, r) => sum + r.usefulness, 0) /
-      approvedReviews.length;
-    const avgRecommendation =
-      approvedReviews.reduce((sum, r) => sum + r.recommendation, 0) /
-      approvedReviews.length;
+    const avgDifficulty = parseFloat(result?.avgDifficulty || '0');
+    const avgWorkload = parseFloat(result?.avgWorkload || '0');
+    const avgQuality = parseFloat(result?.avgQuality || '0');
+    const avgUsefulness = parseFloat(result?.avgUsefulness || '0');
+    const avgRecommendation = parseFloat(result?.avgRecommendation || '0');
 
-    await this.courseRepository.update(
+    console.log('[ReviewsService] Calculated averages for course', courseId, {
+      count,
+      avgDifficulty,
+      avgWorkload,
+      avgQuality,
+      avgUsefulness,
+      avgRecommendation,
+    });
+
+    const updateResult = await this.courseRepository.update(
       { id: courseId },
       {
         avg_difficulty: Math.round(avgDifficulty * 100) / 100,
@@ -287,9 +391,17 @@ export class ReviewsService {
         avg_quality: Math.round(avgQuality * 100) / 100,
         avg_usefulness: Math.round(avgUsefulness * 100) / 100,
         avg_recommendation: Math.round(avgRecommendation * 100) / 100,
-        review_count: approvedReviews.length,
+        review_count: count,
       },
     );
+
+    console.log('[ReviewsService] Update result:', updateResult);
+
+    // Verify the update by fetching the course
+    const updatedCourse = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
+    console.log('[ReviewsService] Updated course data:', updatedCourse);
   }
 
   /**
@@ -338,5 +450,44 @@ export class ReviewsService {
       'UPDATE users SET civic_points = $1 WHERE id = $2',
       [points, userId],
     );
+  }
+
+  /**
+   * TEST ONLY: Public method to test recalculate course aggregates
+   */
+  async testRecalculateCourseAggregates(courseId: number) {
+    console.log('[ReviewsService] TEST: Manually recalculating course', courseId);
+    await this.recalculateCourseAggregates(courseId);
+    
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
+    
+    if (!course) {
+      throw new NotFoundException(`Course with id ${courseId} not found`);
+    }
+    
+    console.log('[ReviewsService] TEST: Final course data:', {
+      id: course.id,
+      avg_difficulty: course.avg_difficulty,
+      avg_workload: course.avg_workload,
+      avg_quality: course.avg_quality,
+      avg_usefulness: course.avg_usefulness,
+      avg_recommendation: course.avg_recommendation,
+      review_count: course.review_count,
+    });
+    
+    return {
+      success: true,
+      course: {
+        id: course.id,
+        avg_difficulty: course.avg_difficulty,
+        avg_workload: course.avg_workload,
+        avg_quality: course.avg_quality,
+        avg_usefulness: course.avg_usefulness,
+        avg_recommendation: course.avg_recommendation,
+        review_count: course.review_count,
+      },
+    };
   }
 }

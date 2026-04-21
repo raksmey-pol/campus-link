@@ -75,6 +75,19 @@ export class ReviewVotesController {
   }
 
   /**
+   * DELETE /reviews/:id/vote
+   * Remove user's vote from a review (unvote)
+   */
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/vote')
+  async unvoteReview(
+    @Param('id', ParseIntPipe) reviewId: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.reviewsService.unvoteReview(reviewId, user.id);
+  }
+
+  /**
    * PATCH /reviews/:id/status
    * Mod — approve or reject review; on approve: recalculate course aggregates + award points
    */
@@ -98,5 +111,14 @@ export class ReviewVotesController {
   async deleteReview(@Param('id', ParseIntPipe) reviewId: number) {
     await this.reviewsService.deleteReview(reviewId);
     return { message: 'Review deleted successfully' };
+  }
+
+  /**
+   * POST /reviews/test/recalculate-course/:courseId
+   * TEST ONLY - Manually recalculate course aggregates
+   */
+  @Post('test/recalculate-course/:courseId')
+  async testRecalculate(@Param('courseId', ParseIntPipe) courseId: number) {
+    return await this.reviewsService.testRecalculateCourseAggregates(courseId);
   }
 }

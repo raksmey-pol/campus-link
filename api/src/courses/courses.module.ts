@@ -23,6 +23,7 @@ import {
 } from './qa.controller';
 import { QAService } from './qa.service';
 import { UsersModule } from '../users/users.module';
+import { StorageModule } from '../common/storage/storage.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { UsersModule } from '../users/users.module';
       PointTransaction,
     ]),
     UsersModule,
+    StorageModule,
   ],
   controllers: [
     CoursesController,
