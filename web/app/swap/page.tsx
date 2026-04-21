@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  fetchSwaps, fetchMySwaps, fetchMyMatches, createSwap, cancelSwap,
+  fetchSwaps, fetchMySwaps, fetchMyMatches, createSwap, cancelSwap, fetchMatchById,
   confirmMatch, declineMatch,
   formatExpiresAt, formatRelativeTime,
   type BackendSwapRequest, type BackendSwapMatch, type SwapStatus, type MatchStatus,
@@ -133,7 +133,7 @@ function SwapCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{swap.requester ? "by" + getUserDisplayName(swap.requester) + " · ": ""}{formatRelativeTime(swap.created_at)}</span>
+        <span>by {swap.requester ? getUserDisplayName(swap.requester) : "you"} · {formatRelativeTime(swap.created_at)}</span>
         {swap.status === "OPEN" && (
           <span className="text-warning font-medium">{formatExpiresAt(swap.expires_at)}</span>
         )}
@@ -152,18 +152,24 @@ function MatchCard({
   onConfirm,
   onDecline,
   confirming,
+  currentUserId,
 }: {
   match: BackendSwapMatch;
   onConfirm: (id: number) => void;
   onDecline: (id: number) => void;
   confirming: number | null;
+  currentUserId?: number;
 }) {
   const config = matchStatusConfig[match.status];
   const isPending = match.status === "PROPOSED" || match.status === "ACCEPTED";
-  const confirmedCount = (match.confirmations ?? []).length;
+  const confirmedCount = match.confirmations?.length ?? 0;
   const totalCount = match.requestC ? 3 : 2;
+  const progressPct = totalCount > 0 ? Math.round((confirmedCount / totalCount) * 100) : 0;
 
   const requests = [match.requestA, match.requestB, ...(match.requestC ? [match.requestC] : [])];
+  const hasConfirmed = (match.confirmations ?? []).some(
+    (c) => c.u_id === currentUserId
+  );
 
   return (
     <div className="rounded-2xl bg-card shadow-card p-4">
@@ -174,9 +180,6 @@ function MatchCard({
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-muted-foreground">
             {match.match_type === "CHAIN" ? "3-way chain" : "Direct"} match
-          </span>
-          <span className="text-[10px] text-muted-foreground">
-            {confirmedCount}/{totalCount} confirmed
           </span>
         </div>
       </div>
@@ -195,44 +198,65 @@ function MatchCard({
         ))}
       </div>
 
-      {/* Confirmation progress */}
-      <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${(confirmedCount / totalCount) * 100}%` }}
-        />
-      </div>
+      {match.status !== "COMPLETED" && match.status !== "DECLINED" && (
+        <div className="mt-3 space-y-1">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
+            <span>{confirmedCount}/{totalCount} confirmed</span>
+            <span>{progressPct}%</span>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {isPending && (
-        <div className="flex gap-2 mt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 rounded-xl text-xs h-9 text-destructive border-destructive/30 hover:bg-destructive/10"
-            onClick={() => onDecline(match.id)}
-            disabled={confirming === match.id}
-          >
-            Decline
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1 rounded-xl text-xs h-9"
-            onClick={() => onConfirm(match.id)}
-            disabled={confirming === match.id}
-          >
-            {confirming === match.id ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              "Confirm Swap"
-            )}
-          </Button>
-        </div>
+        hasConfirmed ? (
+          <div className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-warning/10 py-2.5 text-warning text-xs font-medium">
+            <Clock className="h-4 w-4" />
+            You confirmed — waiting for the other side
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 rounded-xl text-xs h-9 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => onDecline(match.id)}
+              disabled={confirming === match.id}
+            >
+              Decline
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 rounded-xl text-xs h-9"
+              onClick={() => onConfirm(match.id)}
+              disabled={confirming === match.id}
+            >
+              {confirming === match.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                "Confirm Swap"
+              )}
+            </Button>
+          </div>
+        )
       )}
 
       {match.status === "COMPLETED" && (
         <div className="mt-3 flex items-center justify-center gap-1.5 text-success text-xs font-medium">
           <CheckCircle2 className="h-4 w-4" />
           Swap completed successfully
+        </div>
+      )}
+
+      {match.status === "DECLINED" && (
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-destructive text-xs font-medium">
+          <X className="h-4 w-4" />
+          Match was declined — your request is back to open
         </div>
       )}
     </div>
@@ -405,14 +429,14 @@ export default function SwapBoard() {
   const [confirming, setConfirming] = useState<number | null>(null);
 
   // Token for socket connection
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   // ─── Loaders ────────────────────────────────────────────────────────────────
 
   const loadBoard = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchSwaps({ status: "OPEN" });
+      const res = await fetchSwaps();
       setBoardSwaps(res.data);
     } catch {
       toast.error("Failed to load swap board");
@@ -433,11 +457,21 @@ const loadMine = useCallback(async () => {
   }
 }, []);
 
+// Helper to sort matches — add above loadMatches
+const sortMatches = (list: BackendSwapMatch[]) => {
+  const order: Record<string, number> = { PROPOSED: 0, ACCEPTED: 1, COMPLETED: 2, DECLINED: 3 };
+  return [...list].sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4));
+};
+
 const loadMatches = useCallback(async () => {
   setLoading(true);
   try {
     const data = await fetchMyMatches();
-    setMyMatches(Array.isArray(data) ? data : []);
+    const list = Array.isArray(data) ? data : [];
+    // Sort: PROPOSED first, then ACCEPTED, then COMPLETED
+    const order = { PROPOSED: 0, ACCEPTED: 1, COMPLETED: 2, DECLINED: 3 };
+    list.sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4));
+    setMyMatches(sortMatches(list));
   } catch {
     toast.error("Failed to load matches");
   } finally {
@@ -458,10 +492,33 @@ const loadMatches = useCallback(async () => {
     void loadMine();
   }, [loadMatches, loadMine]);
 
-  const handleCompleted = useCallback(() => {
-    void loadMatches();
-    void loadMine();
-  }, [loadMatches, loadMine]);
+  // const handleConfirmed = useCallback(() => {
+  //   void loadMatches();
+  // }, [loadMatches]);
+
+  const handleConfirmed = useCallback((data: { match_id: number; confirmed_by: { id: number; display_name: string } }) => {
+    setTimeout(async () => {
+      const updatedMatch = await fetchMatchById(data.match_id);
+      setMyMatches((prev) =>
+        sortMatches(prev.map((m) => (m.id === data.match_id ? updatedMatch : m)))
+      );
+    }, 500); // same delay to avoid race condition
+  }, []);
+
+  const handleCompleted = useCallback((data: { match_id: number; points_awarded: number }) => {
+    setTimeout(async () => {
+      const updatedMatch = await fetchMatchById(data.match_id);
+      setMyMatches((prev) =>
+        sortMatches(prev.map((m) => (m.id === data.match_id ? updatedMatch : m)))
+      );
+      void loadMine(); // refresh swap requests too since they become COMPLETED
+    }, 300);
+  }, [loadMine]);
+  
+  // const handleCompleted = useCallback(() => {
+  //   void loadMatches();
+  //   void loadMine();
+  // }, [loadMatches, loadMine]);
 
   const handleExpired = useCallback(() => {
     void loadMine();
@@ -483,13 +540,54 @@ const loadMatches = useCallback(async () => {
     }
   };
 
+  // const handleConfirm = async (matchId: number) => {
+  //   setConfirming(matchId);
+  //   try {
+  //     await confirmMatch(matchId);
+  //     toast.success("Match confirmed!");
+  //     await loadMatches(); // await so UI updates before spinner stops
+  //   } catch (err) {
+  //     toast.error("Failed to confirm", {
+  //       description: err instanceof Error ? err.message : undefined,
+  //     });
+  //   } finally {
+  //     setConfirming(null);
+  //   }
+  // };
+
   const handleConfirm = async (matchId: number) => {
     setConfirming(matchId);
+    // Optimistic update — use real user id so hasConfirmed works immediately
+    setMyMatches((prev) =>
+      prev.map((m) => {
+        if (m.id !== matchId) return m;
+        return {
+          ...m,
+          confirmations: [
+            ...(m.confirmations ?? []),
+            {
+              c_id: -1,
+              c_match_id: matchId,
+              c_confirmed_at: new Date().toISOString(),
+              u_id: user?.id ?? -1,
+              u_display_name: "",
+            },
+          ],
+        };
+      })
+    );
     try {
       await confirmMatch(matchId);
       toast.success("Match confirmed!");
-      void loadMatches();
+
+      await new Promise((res) => setTimeout(res, 500));
+
+      const updatedMatch = await fetchMatchById(matchId);
+      setMyMatches((prev) =>
+        sortMatches(prev.map((m) => (m.id === matchId ? updatedMatch : m)))
+      );
     } catch (err) {
+      void loadMatches();
       toast.error("Failed to confirm", {
         description: err instanceof Error ? err.message : undefined,
       });
@@ -533,6 +631,7 @@ const loadMatches = useCallback(async () => {
     <SwapSocketProvider
       token={token}
       onMatchFound={handleMatchFound}
+      onConfirmed={handleConfirmed}
       onCompleted={handleCompleted}
       onExpired={handleExpired}
     >
@@ -706,6 +805,7 @@ const loadMatches = useCallback(async () => {
                       onConfirm={handleConfirm}
                       onDecline={handleDecline}
                       confirming={confirming}
+                      currentUserId={user?.id}
                     />
                   ))}
                   {myMatches.length === 0 && (

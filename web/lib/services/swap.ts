@@ -38,9 +38,11 @@ export type BackendSwapRequest = {
 };
 
 export type BackendConfirmation = {
-  id: number;
-  user: BackendUser;
-  confirmed_at: string;
+  c_id: number;
+  c_match_id: number;
+  c_confirmed_at: string;
+  u_id: number;
+  u_display_name: string;
 };
 
 export type BackendSwapMatch = {
@@ -51,7 +53,7 @@ export type BackendSwapMatch = {
   requestA: BackendSwapRequest;
   requestB: BackendSwapRequest;
   requestC: BackendSwapRequest | null;
-  confirmations: BackendConfirmation[];
+  confirmations: BackendConfirmation[]; // optional — not always returned
 };
 
 type ApiResponse<T> = {
@@ -98,14 +100,15 @@ function buildQuery(params: Record<string, string | number | undefined>) {
 
 export async function fetchSwaps(params?: ListSwapsParams) {
   const qs = params ? buildQuery(params as Record<string, string | number | undefined>) : "";
-  const res = await apiFetch<ApiResponse<BackendSwapRequest[]>>(
+  const res = await apiFetch<{ success: boolean; data: { data: BackendSwapRequest[]; meta: unknown } }>(
     `/api/swap${qs ? `?${qs}` : ""}`,
   );
   return {
-    data: Array.isArray(res.data) ? res.data : [],
-    meta: res.meta,
+    data: Array.isArray(res.data.data) ? res.data.data : [],
+    meta: res.data.meta,
   };
 }
+
 
 export async function fetchMySwaps() {
   const res = await apiFetch<ApiResponse<BackendSwapRequest[]>>("/api/swap/mine");

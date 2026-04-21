@@ -82,12 +82,10 @@ export class SwapService {
         'desired_course.id',
         'desired_course.code',
         'desired_course.title',
-      ])
-      .where('sr.status = :open', { open: SwapStatus.OPEN });
+      ]);
 
-    if (type) qb.andWhere('sr.swap_type = :type', { type });
-    if (course_id)
-      qb.andWhere('sr.current_course_id = :course_id', { course_id });
+    if (type) qb.where('sr.swap_type = :type', { type });
+    if (course_id) qb.andWhere('sr.current_course_id = :course_id', { course_id });
     if (section) qb.andWhere('sr.current_section = :section', { section });
     if (status) qb.andWhere('sr.status = :status', { status });
 
@@ -258,14 +256,20 @@ export class SwapService {
   // ─── Matches ──────────────────────────────────────────────────────────────
 
   async listMyMatches(user: User) {
-    return this.swapMatchRepo
+    const matches = await this.swapMatchRepo
       .createQueryBuilder('m')
       .leftJoin('m.requestA', 'ra')
       .leftJoin('m.requestB', 'rb')
+      .leftJoin('m.requestC', 'rc')
       .leftJoin('ra.requester', 'userA')
       .leftJoin('rb.requester', 'userB')
+      .leftJoin('rc.requester', 'userC')
       .leftJoin('ra.current_course', 'courseA')
       .leftJoin('rb.current_course', 'courseB')
+      .leftJoin('rc.current_course', 'courseC')
+      .leftJoin('ra.desired_course', 'desiredA')
+      .leftJoin('rb.desired_course', 'desiredB')
+      .leftJoin('rc.desired_course', 'desiredC')
       .select([
         'm.id',
         'm.match_type',
@@ -279,20 +283,77 @@ export class SwapService {
         'rb.current_section',
         'rb.desired_section',
         'rb.status',
+        'rc.id',
+        'rc.current_section',
+        'rc.desired_section',
+        'rc.status',
         'userA.id',
         'userA.display_name',
         'userB.id',
         'userB.display_name',
+        'userC.id',
+        'userC.display_name',
         'courseA.id',
         'courseA.code',
         'courseA.title',
         'courseB.id',
         'courseB.code',
         'courseB.title',
+        'courseB.title',
+        'courseC.id',
+        'courseC.code',
+        'courseC.title',
+        'desiredA.id',
+        'desiredA.code',
+        'desiredB.id',
+        'desiredB.code',
+        'desiredC.id',
+        'desiredC.code',
       ])
-      .where('userA.id = :uid OR userB.id = :uid', { uid: user.id })
-      .andWhere('m.status = :status', { status: MatchStatus.PROPOSED })
+      .where('userA.id = :uid OR userB.id = :uid OR userC.id = :uid', {
+        uid: user.id,
+      })
+      .andWhere('m.status IN (:...statuses)', {
+        statuses: [
+          MatchStatus.PROPOSED,
+          MatchStatus.ACCEPTED,
+          MatchStatus.COMPLETED,
+        ],
+      })
       .getMany();
+
+    if (!matches.length) return [];
+
+    // Fetch confirmations for all matches in one query
+    const matchIds = matches.map((m) => m.id);
+    const confirmations = await this.swapConfirmationRepo
+      .createQueryBuilder('c')
+      .leftJoin('c.user', 'u')
+      .leftJoin('c.match', 'm')
+      .select(['c.id', 'c.confirmed_at', 'u.id', 'u.display_name', 'm.id'])
+      .where('m.id IN (:...matchIds)', { matchIds })
+      .getMany();
+
+    // Group by match_id from raw result
+    const confirmationsByMatchId = new Map<number, any[]>();
+    for (const c of confirmations) {
+      const mid = c.match.id;
+      if (!confirmationsByMatchId.has(mid)) {
+        confirmationsByMatchId.set(mid, []);
+      }
+      confirmationsByMatchId.get(mid)!.push({
+        c_id: c.id,
+        c_match_id: c.match.id,
+        c_confirmed_at: c.confirmed_at,
+        u_id: c.user.id,
+        u_display_name: c.user.display_name,
+      });
+    }
+
+    return matches.map((m) => ({
+      ...m,
+      confirmations: confirmationsByMatchId.get(m.id) ?? [],
+    }));
   }
 
   async getMatchById(id: number, user: User) {
@@ -327,7 +388,15 @@ export class SwapService {
       relations: { user: true },
     });
 
-    return { ...match, confirmations };
+    const shapedConfirmations = confirmations.map((c) => ({
+      c_id: c.id,
+      c_match_id: id,
+      c_confirmed_at: c.confirmed_at,
+      u_id: c.user.id,
+      u_display_name: c.user.display_name,
+    }));
+
+    return { ...match, confirmations: shapedConfirmations };
   }
 
   async confirmMatch(matchId: number, user: User): Promise<void> {
