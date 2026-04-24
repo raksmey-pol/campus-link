@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthUserProfile } from "@/lib/bff/auth";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import Image from "next/image";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Home", path: "/" },
@@ -117,12 +118,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-card shadow-card">
         <div className="flex h-16 items-center gap-3 px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">
-              CL
-            </span>
-          </div>
-          <span className="text-lg font-bold text-foreground">CampusLink</span>
+          <Image src="/logo/logo.jpg" alt="CampusLink Logo" width={32} height={32} />
         </div>
 
         <nav className="flex-1 space-y-1 px-3 pt-4">
@@ -220,14 +216,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {/* Mobile header */}
         <header className="flex lg:hidden h-14 items-center justify-between bg-card px-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary">
-              <span className="text-xs font-bold text-primary-foreground">
-                CL
-              </span>
-            </div>
-            <span className="text-base font-bold text-foreground">
-              CampusLink
-            </span>
+            <Image src="/logo/logo.jpg" alt="CampusLink Logo" width={96} height={96} />
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">

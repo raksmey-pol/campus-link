@@ -81,6 +81,15 @@ export class LostFoundController {
     });
   }
 
+  // =========================== GET /items/mine ==================================
+  //  Authenticated user: their own reported items + submitted claims.
+  @UseGuards(JwtAuthGuard)
+  @Get('mine')
+  async getMyActivity(@CurrentUser() user: User) {
+    const result = await this.itemsService.getMyActivity(user);
+    return ok(result, { message: 'My activity retrieved successfully' });
+  }
+
   // =========================== GET /items/:id ==================================
   //  Authenticated detail view
   @UseGuards(JwtAuthGuard)

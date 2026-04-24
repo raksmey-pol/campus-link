@@ -28,6 +28,7 @@ export type BackendClaim = {
 export type ModerationCase = {
   id: string;
   item: string;
+  photoUrl: string | null;
   location: string;
   tier: string;
   reporter: string;
