@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: campus-link-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-campuslink}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-postgres}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-campuslink}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: campus-link-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres}
+      DB_NAME: ${DB_NAME:-campuslink}
+      DB_SYNC: ${DB_SYNC:-false}
+      DB_MIGRATIONS_RUN: ${DB_MIGRATIONS_RUN:-true}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-strong-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-replace-with-a-different-strong-secret}
+      JWT_EXPIRES_IN_SECONDS: ${JWT_EXPIRES_IN_SECONDS:-604800}
+      JWT_REFRESH_EXPIRES_IN_SECONDS: ${JWT_REFRESH_EXPIRES_IN_SECONDS:-2592000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      LOCAL_UPLOAD_DIR: uploads
+      API_PUBLIC_BASE_URL: ${API_PUBLIC_BASE_URL:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - api_uploads:/app/uploads
+
+volumes:
+  db_data:
+  api_uploads:
