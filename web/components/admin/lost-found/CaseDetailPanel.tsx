@@ -56,11 +56,20 @@ function ItemModerationView({
   return (
     <>
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-        <div className="flex aspect-video items-center justify-center rounded-xl border border-border bg-muted/60">
-          <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
-            <ImageOff className="h-8 w-8" />
-            <span className="text-[10px] font-medium uppercase tracking-wider">No image attached</span>
-          </div>
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-border bg-muted/60">
+          {caseItem.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={caseItem.photoUrl}
+              alt={caseItem.item}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50">
+              <ImageOff className="h-8 w-8" />
+              <span className="text-[10px] font-medium uppercase tracking-wider">No image attached</span>
+            </div>
+          )}
         </div>
 
         <div>

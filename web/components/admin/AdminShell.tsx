@@ -45,7 +45,7 @@ const navItems: Array<{
     href: "/admin/lost-found",
     icon: Briefcase,
   },
-  { key: "course-reviews", label: "Course Reviews", href: "#", icon: BookOpen },
+  { key: "course-reviews", label: "Course Community", href: "/admin/course-reviews", icon: BookOpen },
   { key: "swap-board", label: "Swap Board", href: "#", icon: Shuffle },
   { key: "users", label: "Users", href: "#", icon: Users },
   { key: "point-ledger", label: "Point Ledger", href: "#", icon: Wallet },

@@ -100,3 +100,18 @@ export async function deleteReview(reviewId: number): Promise<void> {
     method: "DELETE",
   });
 }
+
+export async function updateReviewStatus(
+  reviewId: number,
+  status: "APPROVED" | "REJECTED"
+): Promise<CourseReview> {
+  const response = await apiFetch<CourseReview>(
+    `/api/reviews/${reviewId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }
+  );
+
+  return response;
+}

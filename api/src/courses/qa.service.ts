@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { CourseQuestion } from '../database/entities/course-question.entity';
 import { CourseAnswer } from '../database/entities/course-answer.entity';
 import { AnswerVote } from '../database/entities/answer-vote.entity';
@@ -20,6 +20,7 @@ import { PinQuestionDto } from './dto/pin-question.dto';
 import { UsersService } from '../users/users.service';
 
 type SortOption = 'recent' | 'most_viewed' | 'unanswered';
+type ModerationQuestionState = 'ALL' | 'OPEN' | 'PINNED' | 'CLOSED';
 
 @Injectable()
 export class QAService {
@@ -78,6 +79,159 @@ export class QAService {
       data: data.map((q) => this.sanitizeQuestion(q)),
       total,
       page,
+    };
+  }
+
+  async listModerationQuestions(options: {
+    page?: number;
+    search?: string;
+    courseId?: number;
+    state?: ModerationQuestionState;
+  }) {
+    const take = 20;
+    const page = Math.max(1, options.page ?? 1);
+    const skip = (page - 1) * take;
+    const search = options.search?.trim();
+    const state = options.state ?? 'ALL';
+
+    const qb = this.questionRepository
+      .createQueryBuilder('question')
+      .leftJoinAndSelect('question.user', 'user')
+      .leftJoinAndSelect('question.course', 'course');
+
+    if (options.courseId) {
+      qb.where('course.id = :courseId', { courseId: options.courseId });
+    }
+
+    if (state === 'OPEN') {
+      qb.andWhere('question.is_closed = false');
+    } else if (state === 'PINNED') {
+      qb.andWhere('question.is_pinned = true');
+    } else if (state === 'CLOSED') {
+      qb.andWhere('question.is_closed = true');
+    }
+
+    if (search) {
+      qb.andWhere(
+        new Brackets((searchQb) => {
+          searchQb
+            .where('course.code ILIKE :search', { search: `%${search}%` })
+            .orWhere('course.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('user.display_name ILIKE :search', { search: `%${search}%` })
+            .orWhere('question.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('question.body ILIKE :search', { search: `%${search}%` });
+        }),
+      );
+    }
+
+    qb
+      .orderBy('question.is_pinned', 'DESC')
+      .addOrderBy('question.updated_at', 'DESC')
+      .skip(skip)
+      .take(take);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((question) => ({
+        id: question.id,
+        title: question.title,
+        body: question.body,
+        view_count: question.view_count,
+        answer_count: question.answer_count,
+        is_pinned: question.is_pinned,
+        is_closed: question.is_closed,
+        created_at: question.created_at,
+        updated_at: question.updated_at,
+        user: {
+          id: question.user.id,
+          display_name: question.user.display_name,
+        },
+        course: {
+          id: question.course.id,
+          code: question.course.code,
+          title: question.course.title,
+          department: question.course.department,
+        },
+      })),
+      total,
+      page,
+      pageSize: take,
+    };
+  }
+
+  async getModerationQuestionDetail(questionId: number) {
+    const question = await this.questionRepository.findOne({
+      where: { id: questionId },
+      relations: ['user', 'course'],
+    });
+
+    if (!question) {
+      throw new NotFoundException(`Question with id ${questionId} not found`);
+    }
+
+    const answers = await this.answerRepository.find({
+      where: { question: { id: questionId } },
+      relations: ['user'],
+      order: {
+        is_accepted: 'DESC',
+        upvotes: 'DESC',
+        created_at: 'DESC',
+      },
+    });
+
+    return {
+      id: question.id,
+      title: question.title,
+      body: question.body,
+      view_count: question.view_count,
+      answer_count: question.answer_count,
+      is_pinned: question.is_pinned,
+      is_closed: question.is_closed,
+      created_at: question.created_at,
+      updated_at: question.updated_at,
+      user: {
+        id: question.user.id,
+        display_name: question.user.display_name,
+      },
+      course: {
+        id: question.course.id,
+        code: question.course.code,
+        title: question.course.title,
+        department: question.course.department,
+      },
+      answers: answers.map((answer) => ({
+        id: answer.id,
+        body: answer.body,
+        upvotes: answer.upvotes,
+        downvotes: answer.downvotes,
+        is_accepted: answer.is_accepted,
+        created_at: answer.created_at,
+        updated_at: answer.updated_at,
+        user: {
+          id: answer.user.id,
+          display_name: answer.user.display_name,
+        },
+      })),
+    };
+  }
+
+  async getModerationCounts() {
+    const [totalQuestions, openQuestions, pinnedQuestions, closedQuestions, totalAnswers] =
+      await Promise.all([
+        this.questionRepository.count(),
+        this.questionRepository.count({ where: { is_closed: false } }),
+        this.questionRepository.count({ where: { is_pinned: true } }),
+        this.questionRepository.count({ where: { is_closed: true } }),
+        this.answerRepository.count(),
+      ]);
+
+    return {
+      totalQuestions,
+      openQuestions,
+      pinnedQuestions,
+      closedQuestions,
+      totalAnswers,
     };
   }
 
