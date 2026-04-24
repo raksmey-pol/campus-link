@@ -269,9 +269,25 @@ export class LostFoundService {
       latest_claim_submitted_at: null,
     };
 
+    // Include approved claimer info so finder/claimer can see handoff status
+    let approvedClaimer: { id: number; display_name: string | null } | null = null;
+    if (item.status === ItemStatus.CLAIMED || item.status === ItemStatus.RESOLVED) {
+      const approvedClaim = await this.claimsRepo.findOne({
+        where: { item: { id }, status: ClaimStatus.APPROVED },
+        relations: { claimer: true },
+      });
+      if (approvedClaim) {
+        approvedClaimer = {
+          id: approvedClaim.claimer.id,
+          display_name: approvedClaim.claimer.display_name,
+        };
+      }
+    }
+
     const itemWithClaimAndResolveInfo = {
       ...item,
       claim_summary: claimSummary,
+      approved_claimer: approvedClaimer,
       resolve_state: {
         is_resolved:
           item.status === ItemStatus.RESOLVED || item.resolved_at != null,
@@ -691,6 +707,64 @@ export class LostFoundService {
       reviewed_at: claim.reviewed_at,
       created_at: claim.created_at,
     }));
+  }
+
+  // =========================== User: my reported items + my submitted claims ================================
+
+  async getMyActivity(user: User) {
+    const reportedItems = await this.itemsRepo.find({
+      where: { reporter: { id: user.id } },
+      order: { created_at: 'DESC' },
+    });
+
+    const claimSummaryByItemId = await this.getClaimSummariesByItemIds(
+      reportedItems.map((i) => i.id),
+    );
+
+    const reportedItemsWithSummary = reportedItems.map((item) => ({
+      id: item.id,
+      title: item.title,
+      photo_url: item.photo_url,
+      location: item.location,
+      value_tier: item.value_tier,
+      status: item.status,
+      created_at: item.created_at,
+      claim_summary: claimSummaryByItemId.get(item.id) ?? {
+        total_claims: 0,
+        pending_claims: 0,
+        approved_claims: 0,
+        rejected_claims: 0,
+        latest_claim_submitted_at: null,
+      },
+    }));
+
+    const submittedClaims = await this.claimsRepo.find({
+      where: { claimer: { id: user.id } },
+      relations: { item: true },
+      order: { created_at: 'DESC' },
+    });
+
+    const submittedClaimsFormatted = submittedClaims.map((claim) => ({
+      id: claim.id,
+      status: claim.status,
+      proof_description: claim.proof_description,
+      rejection_reason: claim.rejection_reason,
+      created_at: claim.created_at,
+      reviewed_at: claim.reviewed_at,
+      item: {
+        id: claim.item.id,
+        title: claim.item.title,
+        photo_url: claim.item.photo_url,
+        location: claim.item.location,
+        value_tier: claim.item.value_tier,
+        status: claim.item.status,
+      },
+    }));
+
+    return {
+      reported_items: reportedItemsWithSummary,
+      submitted_claims: submittedClaimsFormatted,
+    };
   }
 
   // =========================== Admin: hard delete ================================

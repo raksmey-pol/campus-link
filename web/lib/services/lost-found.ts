@@ -34,6 +34,7 @@ type BackendResolveState = {
 };
 
 type BackendReporter = {
+  id?: number;
   display_name?: string | null;
   avatar_url?: string | null;
 };
@@ -56,6 +57,7 @@ type BackendItem = {
   created_at: string;
   updated_at?: string;
   reporter?: BackendReporter | null;
+  approved_claimer?: { id: number; display_name?: string | null } | null;
   claim_summary?: BackendClaimSummary;
   resolve_state?: BackendResolveState;
 };
@@ -73,8 +75,10 @@ export type LostFoundFeedItem = {
   status: LostFoundFeedStatus;
   createdAt: string;
   updatedAt: string | null;
+  reporterId: number | null;
   reporterName: string;
   reporterAvatarUrl: string | null;
+  approvedClaimerId: number | null;
   claimSummary: {
     totalClaims: number;
     pendingClaims: number;
@@ -189,8 +193,10 @@ function mapBackendItemToFeedItem(item: BackendItem): LostFoundFeedItem {
     status: normalizedStatus,
     createdAt: item.created_at,
     updatedAt: item.updated_at ?? null,
+    reporterId: item.reporter?.id ?? null,
     reporterName,
     reporterAvatarUrl: item.reporter?.avatar_url?.trim() || null,
+    approvedClaimerId: item.approved_claimer?.id ?? null,
     claimSummary: {
       totalClaims: claimSummary?.total_claims ?? 0,
       pendingClaims: claimSummary?.pending_claims ?? 0,
@@ -492,11 +498,118 @@ export async function patchClaimStatus(
 }
 
 export async function resolveItem(
-  itemId: string,
+  itemId: string | number,
 ): Promise<{ resolved: boolean; message: string }> {
   const response = await apiFetch<BackendApiResponse<{ resolved: boolean }>>(
     `/api/lost-found/${itemId}/resolve`,
     { method: "PATCH" },
   );
   return { resolved: response.data.resolved, message: response.message };
+}
+
+export type MyActivityReportedItem = {
+  id: number;
+  title: string;
+  photoUrl: string | null;
+  location: string;
+  valueTier: LostFoundValueTier;
+  status: LostFoundFeedStatus;
+  createdAt: string;
+  claimSummary: {
+    totalClaims: number;
+    pendingClaims: number;
+    approvedClaims: number;
+    rejectedClaims: number;
+  };
+};
+
+export type MyActivitySubmittedClaim = {
+  id: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  proofDescription: string;
+  rejectionReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  item: {
+    id: number;
+    title: string;
+    photoUrl: string | null;
+    location: string;
+    valueTier: LostFoundValueTier;
+    status: LostFoundFeedStatus;
+  };
+};
+
+export async function fetchMyActivity(): Promise<{
+  reportedItems: MyActivityReportedItem[];
+  submittedClaims: MyActivitySubmittedClaim[];
+}> {
+  const response = await apiFetch<
+    BackendApiResponse<{
+      reported_items: Array<{
+        id: number;
+        title: string;
+        photo_url?: string | null;
+        location?: string;
+        value_tier: string;
+        status: string;
+        created_at: string;
+        claim_summary?: BackendClaimSummary;
+      }>;
+      submitted_claims: Array<{
+        id: number;
+        status: string;
+        proof_description: string;
+        rejection_reason?: string | null;
+        created_at: string;
+        reviewed_at?: string | null;
+        item: {
+          id: number;
+          title: string;
+          photo_url?: string | null;
+          location?: string;
+          value_tier: string;
+          status: string;
+        };
+      }>;
+    }>
+  >("/api/lost-found/mine");
+
+  const reportedItems: MyActivityReportedItem[] = response.data.reported_items.map(
+    (i) => ({
+      id: i.id,
+      title: i.title,
+      photoUrl: toPublicPhotoUrl(i.photo_url),
+      location: i.location?.trim() || "Location shared after verification",
+      valueTier: normalizeValueTier(i.value_tier),
+      status: normalizeStatus(i.status),
+      createdAt: i.created_at,
+      claimSummary: {
+        totalClaims: i.claim_summary?.total_claims ?? 0,
+        pendingClaims: i.claim_summary?.pending_claims ?? 0,
+        approvedClaims: i.claim_summary?.approved_claims ?? 0,
+        rejectedClaims: i.claim_summary?.rejected_claims ?? 0,
+      },
+    }),
+  );
+
+  const submittedClaims: MyActivitySubmittedClaim[] =
+    response.data.submitted_claims.map((c) => ({
+      id: c.id,
+      status: normalizeStatus(c.status) as "PENDING" | "APPROVED" | "REJECTED",
+      proofDescription: c.proof_description,
+      rejectionReason: c.rejection_reason ?? null,
+      createdAt: c.created_at,
+      reviewedAt: c.reviewed_at ?? null,
+      item: {
+        id: c.item.id,
+        title: c.item.title,
+        photoUrl: toPublicPhotoUrl(c.item.photo_url),
+        location: c.item.location?.trim() || "Location shared after verification",
+        valueTier: normalizeValueTier(c.item.value_tier),
+        status: normalizeStatus(c.item.status),
+      },
+    }));
+
+  return { reportedItems, submittedClaims };
 }
