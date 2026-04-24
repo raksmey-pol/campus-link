@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { CourseResource } from '../database/entities/course-resource.entity';
 import { ResourceVote } from '../database/entities/resource-vote.entity';
 import { PointTransaction } from '../database/entities/point-transaction.entity';
@@ -62,6 +62,101 @@ export class ResourcesService {
       total,
       page,
     };
+  }
+
+  async listModerationResources(options: {
+    status?: ResourceStatus;
+    type?: ResourceType;
+    page?: number;
+    search?: string;
+  }) {
+    const take = 20;
+    const page = Math.max(1, options.page ?? 1);
+    const skip = (page - 1) * take;
+    const search = options.search?.trim();
+
+    const qb = this.resourceRepository
+      .createQueryBuilder('resource')
+      .leftJoinAndSelect('resource.user', 'user')
+      .leftJoinAndSelect('resource.course', 'course');
+
+    if (options.status) {
+      qb.where('resource.status = :status', { status: options.status });
+    }
+
+    if (options.type) {
+      qb.andWhere('resource.type = :type', { type: options.type });
+    }
+
+    if (search) {
+      qb.andWhere(
+        new Brackets((searchQb) => {
+          searchQb
+            .where('course.code ILIKE :search', { search: `%${search}%` })
+            .orWhere('course.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('user.display_name ILIKE :search', { search: `%${search}%` })
+            .orWhere('resource.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('resource.description ILIKE :search', { search: `%${search}%` });
+        }),
+      );
+    }
+
+    if (!options.status) {
+      qb.orderBy(
+        `CASE
+          WHEN resource.status = '${ResourceStatus.PENDING}' THEN 0
+          WHEN resource.status = '${ResourceStatus.REJECTED}' THEN 1
+          ELSE 2
+        END`,
+        'ASC',
+      );
+    }
+
+    qb
+      .addOrderBy('resource.created_at', 'DESC')
+      .skip(skip)
+      .take(take);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((resource) => ({
+        id: resource.id,
+        status: resource.status,
+        type: resource.type,
+        title: resource.title,
+        description: resource.description,
+        file_url: resource.file_url,
+        link_url: resource.link_url,
+        upvotes: resource.upvotes,
+        downvotes: resource.downvotes,
+        created_at: resource.created_at,
+        user: {
+          id: resource.user.id,
+          display_name: resource.user.display_name,
+        },
+        course: {
+          id: resource.course.id,
+          code: resource.course.code,
+          title: resource.course.title,
+          department: resource.course.department,
+        },
+      })),
+      total,
+      page,
+      pageSize: take,
+    };
+  }
+
+  async getModerationCounts() {
+    const [pending, approved, rejected, total] = await Promise.all([
+      this.resourceRepository.count({ where: { status: ResourceStatus.PENDING } }),
+      this.resourceRepository.count({ where: { status: ResourceStatus.APPROVED } }),
+      this.resourceRepository.count({ where: { status: ResourceStatus.REJECTED } }),
+      this.resourceRepository.count(),
+    ]);
+
+    return { pending, approved, rejected, total };
   }
 
   /**

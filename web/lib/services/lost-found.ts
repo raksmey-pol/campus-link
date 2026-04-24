@@ -274,6 +274,7 @@ function mapBackendItemToModerationCase(item: BackendItem): ModerationCase {
   return {
     id: String(feedItem.id),
     item: feedItem.title,
+    photoUrl: feedItem.photoUrl,
     location: feedItem.location,
     tier: feedItem.valueTier.replaceAll("_", " "),
     reporter: feedItem.reporterName,

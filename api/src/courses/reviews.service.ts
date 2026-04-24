@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { CourseReview } from '../database/entities/course-review.entity';
 import { ReviewVote } from '../database/entities/review-vote.entity';
 import { PointTransaction } from '../database/entities/point-transaction.entity';
@@ -76,6 +76,94 @@ export class ReviewsService {
       total,
       page,
     };
+  }
+
+  async listModerationReviews(options: {
+    status?: ReviewStatus;
+    page?: number;
+    search?: string;
+  }) {
+    const take = 20;
+    const page = Math.max(1, options.page ?? 1);
+    const skip = (page - 1) * take;
+    const search = options.search?.trim();
+
+    const qb = this.reviewRepository
+      .createQueryBuilder('review')
+      .leftJoinAndSelect('review.user', 'user')
+      .leftJoinAndSelect('review.course', 'course');
+
+    if (options.status) {
+      qb.where('review.status = :status', { status: options.status });
+    }
+
+    if (search) {
+      qb.andWhere(
+        new Brackets((searchQb) => {
+          searchQb
+            .where('course.code ILIKE :search', { search: `%${search}%` })
+            .orWhere('course.title ILIKE :search', { search: `%${search}%` })
+            .orWhere('user.display_name ILIKE :search', { search: `%${search}%` })
+            .orWhere('review.review_text ILIKE :search', { search: `%${search}%` });
+        }),
+      );
+    }
+
+    if (!options.status) {
+      qb.orderBy(
+        `CASE
+          WHEN review.status = '${ReviewStatus.PENDING}' THEN 0
+          WHEN review.status = '${ReviewStatus.REJECTED}' THEN 1
+          ELSE 2
+        END`,
+        'ASC',
+      );
+    }
+
+    qb.addOrderBy('review.created_at', 'DESC').skip(skip).take(take);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((review) => ({
+        id: review.id,
+        status: review.status,
+        difficulty: review.difficulty,
+        workload_hours: Number(review.workload_hours),
+        quality: review.quality,
+        usefulness: review.usefulness,
+        recommendation: review.recommendation,
+        review_text: review.review_text,
+        is_anonymous: review.is_anonymous,
+        helpfulness_votes: review.helpfulness_votes,
+        created_at: review.created_at,
+        updated_at: review.updated_at,
+        user: {
+          id: review.user.id,
+          display_name: review.user.display_name,
+        },
+        course: {
+          id: review.course.id,
+          code: review.course.code,
+          title: review.course.title,
+          department: review.course.department,
+        },
+      })),
+      total,
+      page,
+      pageSize: take,
+    };
+  }
+
+  async getModerationCounts() {
+    const [pending, approved, rejected, total] = await Promise.all([
+      this.reviewRepository.count({ where: { status: ReviewStatus.PENDING } }),
+      this.reviewRepository.count({ where: { status: ReviewStatus.APPROVED } }),
+      this.reviewRepository.count({ where: { status: ReviewStatus.REJECTED } }),
+      this.reviewRepository.count(),
+    ]);
+
+    return { pending, approved, rejected, total };
   }
 
   /**

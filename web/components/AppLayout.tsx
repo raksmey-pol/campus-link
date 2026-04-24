@@ -117,8 +117,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 z-50 w-64 flex-col bg-card shadow-card">
-        <div className="flex h-16 items-center gap-3 px-6">
-          <Image src="/logo/logo.jpg" alt="CampusLink Logo" width={32} height={32} />
+        <div className="flex h-16 items-center gap-3 px-6 mt-2">
+          <Image src="/logo/logo.jpg" alt="CampusLink Logo" width={128} height={128} />
         </div>
 
         <nav className="flex-1 space-y-1 px-3 pt-4">

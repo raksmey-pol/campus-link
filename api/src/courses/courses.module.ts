@@ -10,6 +10,7 @@ import { CourseAnswer } from '../database/entities/course-answer.entity';
 import { AnswerVote } from '../database/entities/answer-vote.entity';
 import { PointTransaction } from '../database/entities/point-transaction.entity';
 import { CoursesController } from './courses.controller';
+import { CourseCommunityAdminController } from './course-community-admin.controller';
 import { CoursesService } from './courses.service';
 import { ReviewsController, ReviewVotesController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
@@ -43,6 +44,7 @@ import { StorageModule } from '../common/storage/storage.module';
   ],
   controllers: [
     CoursesController,
+    CourseCommunityAdminController,
     ReviewsController,
     ReviewVotesController,
     ResourcesController,

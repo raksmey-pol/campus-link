@@ -15,3 +15,15 @@ export async function GET(
     path,
   });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return proxyBackendJson({
+    request,
+    method: "DELETE",
+    path: `/questions/${id}`,
+  });
+}
