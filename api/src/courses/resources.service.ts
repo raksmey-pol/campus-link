@@ -121,16 +121,18 @@ export class ResourcesService {
   }
 
   /**
-   * Vote on a resource (upvote/downvote)
+   * Vote on a resource (upvote/downvote, with ability to change or remove vote)
+   * Returns the updated resource with new vote counts
    */
   async voteResource(
     resourceId: number,
     userId: number,
     dto: VoteResourceDto,
-  ): Promise<ResourceVote> {
+  ): Promise<CourseResource> {
     // Verify resource exists
     const resource = await this.resourceRepository.findOne({
       where: { id: resourceId },
+      relations: ['user'],
     });
     if (!resource) {
       throw new NotFoundException(`Resource with id ${resourceId} not found`);
@@ -141,25 +143,56 @@ export class ResourcesService {
       where: { resource: { id: resourceId }, user: { id: userId } },
     });
 
-    if (existingVote) {
-      throw new BadRequestException(
-        'You have already voted on this resource',
-      );
+    // If user is voting the same way, remove the vote
+    if (existingVote && existingVote.vote === dto.vote) {
+      // Remove the vote
+      await this.resourceVoteRepository.remove(existingVote);
+
+      // Update resource vote counts
+      await this.updateResourceVoteCounts(resourceId);
+
+      const updatedResource = await this.resourceRepository.findOne({
+        where: { id: resourceId },
+        relations: ['user'],
+      });
+
+      return this.sanitizeResource(updatedResource!);
     }
 
-    // Create vote
+    // If user has a different vote, update it
+    if (existingVote) {
+      existingVote.vote = dto.vote;
+      await this.resourceVoteRepository.save(existingVote);
+
+      // Update resource vote counts
+      await this.updateResourceVoteCounts(resourceId);
+
+      const updatedResource = await this.resourceRepository.findOne({
+        where: { id: resourceId },
+        relations: ['user'],
+      });
+
+      return this.sanitizeResource(updatedResource!);
+    }
+
+    // Create new vote
     const vote = this.resourceVoteRepository.create({
       resource: { id: resourceId },
       user: { id: userId },
       vote: dto.vote,
     });
 
-    const savedVote = await this.resourceVoteRepository.save(vote);
+    await this.resourceVoteRepository.save(vote);
 
     // Update resource vote counts
     await this.updateResourceVoteCounts(resourceId);
 
-    return savedVote;
+    const updatedResource = await this.resourceRepository.findOne({
+      where: { id: resourceId },
+      relations: ['user'],
+    });
+
+    return this.sanitizeResource(updatedResource!);
   }
 
   /**

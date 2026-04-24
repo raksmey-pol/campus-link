@@ -97,29 +97,76 @@ export default function QuestionDetail() {
 
       const currentVote = answerVotes.get(answerId);
 
-      // If voting the same way, unvote by not sending a vote (or toggle)
-      if (currentVote === voteType) {
-        // Just toggle off the UI (backend doesn't support unvoting, so we just remove from local state)
-        const newVotes = new Map(answerVotes);
-        newVotes.delete(answerId);
-        setAnswerVotes(newVotes);
-        return;
-      }
-
-      // Vote on the answer
-      const payload: VoteAnswerPayload = { vote_type: voteType };
-      await voteAnswer(qId, answerId, payload);
-
-      // Update local state
       const newVotes = new Map(answerVotes);
-      newVotes.set(answerId, voteType);
-      setAnswerVotes(newVotes);
+      let optimisticAnswers = question.answers;
 
-      // Refresh question detail to get updated vote counts
-      const updatedQuestion = await fetchQuestionDetail(qId);
-      setQuestion(updatedQuestion);
+      // Calculate optimistic update
+      optimisticAnswers = question.answers.map((answer) => {
+        if (answer.id === answerId) {
+          // Undo vote if the same vote is clicked again
+          if (currentVote === voteType) {
+            newVotes.delete(answerId);
+            if (voteType === "UPVOTE") {
+              return { ...answer, upvotes: answer.upvotes - 1 };
+            } else {
+              return { ...answer, downvotes: answer.downvotes - 1 };
+            }
+          }
+
+          // Switch vote type
+          if (currentVote && currentVote !== voteType) {
+            newVotes.set(answerId, voteType);
+            if (voteType === "UPVOTE") {
+              return {
+                ...answer,
+                upvotes: answer.upvotes + 1,
+                downvotes: Math.max(0, answer.downvotes - 1),
+              };
+            } else {
+              return {
+                ...answer,
+                downvotes: answer.downvotes + 1,
+                upvotes: Math.max(0, answer.upvotes - 1),
+              };
+            }
+          }
+
+          // Apply new vote
+          newVotes.set(answerId, voteType);
+          if (voteType === "UPVOTE") {
+            return { ...answer, upvotes: answer.upvotes + 1 };
+          } else {
+            return { ...answer, downvotes: answer.downvotes + 1 };
+          }
+        }
+        return answer;
+      });
+
+      // Optimistically update UI
+      setAnswerVotes(newVotes);
+      setQuestion({ ...question, answers: optimisticAnswers });
+
+      // Send vote to backend and sync with response
+      const payload: VoteAnswerPayload = { vote_type: voteType };
+      const updatedAnswer = await voteAnswer(qId, answerId, payload);
+
+      // Update the specific answer with the server-persisted vote counts
+      const syncedAnswers = question.answers.map((answer) =>
+        answer.id === answerId ? updatedAnswer : answer
+      );
+      setQuestion({ ...question, answers: syncedAnswers });
     } catch (err: any) {
       console.error("Failed to vote on answer:", err);
+      // Revert optimistic update on error by reloading question data
+      try {
+        const qId = parseInt(questionId, 10);
+        if (!isNaN(qId)) {
+          const reloadedQuestion = await fetchQuestionDetail(qId);
+          setQuestion(reloadedQuestion);
+        }
+      } catch (reloadErr) {
+        console.error("Failed to reload question after vote error:", reloadErr);
+      }
     }
   };
 

@@ -80,8 +80,8 @@ export async function createResource(
 export async function voteResource(
   resourceId: number,
   vote: "UP" | "DOWN"
-): Promise<any> {
-  const response = await apiFetch(
+): Promise<CourseResource> {
+  const response = await apiFetch<CourseResource>(
     `/api/resources/${resourceId}/vote`,
     {
       method: "POST",
