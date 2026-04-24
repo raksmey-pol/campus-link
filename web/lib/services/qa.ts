@@ -113,8 +113,8 @@ export async function voteAnswer(
   questionId: number,
   answerId: number,
   payload: VoteAnswerPayload
-): Promise<any> {
-  const response = await apiFetch(
+): Promise<CourseAnswer> {
+  const response = await apiFetch<CourseAnswer>(
     `/api/questions/${questionId}/answers/${answerId}/vote`,
     {
       method: "POST",

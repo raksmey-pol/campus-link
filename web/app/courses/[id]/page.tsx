@@ -426,30 +426,75 @@ export default function CourseDetail() {
     try {
       const currentVote = resourceVotes.get(resourceId);
 
-      // If voting the same way, toggle off
-      if (currentVote === vote) {
-        const newResourceVotes = new Map(resourceVotes);
-        newResourceVotes.delete(resourceId);
-        setResourceVotes(newResourceVotes);
-        return;
-      }
-
-      // Vote on the resource
-      await voteResource(resourceId, vote);
-
-      // Update local state
       const newResourceVotes = new Map(resourceVotes);
-      newResourceVotes.set(resourceId, vote);
-      setResourceVotes(newResourceVotes);
+      let optimisticResources = resources;
 
-      // Refresh resources list
-      const courseId = parseInt(id, 10);
-      if (!isNaN(courseId)) {
-        const updatedResources = await fetchResources(courseId);
-        setResources(updatedResources.data || []);
-      }
+      // Calculate optimistic update
+      optimisticResources = resources.map((resource) => {
+        if (resource.id === resourceId) {
+          // Undo vote if the same vote is clicked again
+          if (currentVote === vote) {
+            newResourceVotes.delete(resourceId);
+            if (vote === "UP") {
+              return { ...resource, upvotes: resource.upvotes - 1 };
+            } else {
+              return { ...resource, downvotes: resource.downvotes - 1 };
+            }
+          }
+
+          // Switch vote type
+          if (currentVote && currentVote !== vote) {
+            newResourceVotes.set(resourceId, vote);
+            if (vote === "UP") {
+              return {
+                ...resource,
+                upvotes: resource.upvotes + 1,
+                downvotes: Math.max(0, resource.downvotes - 1),
+              };
+            } else {
+              return {
+                ...resource,
+                downvotes: resource.downvotes + 1,
+                upvotes: Math.max(0, resource.upvotes - 1),
+              };
+            }
+          }
+
+          // Apply new vote
+          newResourceVotes.set(resourceId, vote);
+          if (vote === "UP") {
+            return { ...resource, upvotes: resource.upvotes + 1 };
+          } else {
+            return { ...resource, downvotes: resource.downvotes + 1 };
+          }
+        }
+        return resource;
+      });
+
+      // Optimistically update UI
+      setResourceVotes(newResourceVotes);
+      setResources(optimisticResources);
+
+      // Send vote to backend and sync with response
+      const updatedResource = await voteResource(resourceId, vote);
+
+      // Update the specific resource with the server-persisted vote counts
+      const syncedResources = resources.map((resource) =>
+        resource.id === resourceId ? updatedResource : resource
+      );
+      setResources(syncedResources);
     } catch (err: any) {
       console.error('Failed to vote on resource:', err);
+      // Revert optimistic update on error by reloading resources
+      try {
+        const courseId = parseInt(id, 10);
+        if (!isNaN(courseId)) {
+          const reloadedResources = await fetchResources(courseId);
+          setResources(reloadedResources.data || []);
+        }
+      } catch (reloadErr) {
+        console.error('Failed to reload resources after vote error:', reloadErr);
+      }
     }
   };
 

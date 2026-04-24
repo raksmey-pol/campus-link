@@ -243,15 +243,17 @@ export class QAService {
 
   /**
    * Vote on an answer (upvote or downvote, with ability to change or remove vote)
+   * Returns the updated answer with new vote counts
    */
   async voteAnswer(
     answerId: number,
     userId: number,
     dto: VoteAnswerDto,
-  ): Promise<AnswerVote> {
+  ): Promise<CourseAnswer> {
     // Verify answer exists
     const answer = await this.answerRepository.findOne({
       where: { id: answerId },
+      relations: ['user'],
     });
 
     if (!answer) {
@@ -274,9 +276,8 @@ export class QAService {
       } else {
         answer.downvotes = Math.max(0, answer.downvotes - 1);
       }
-      await this.answerRepository.save(answer);
-
-      return existingVote;
+      const updatedAnswer = await this.answerRepository.save(answer);
+      return this.sanitizeAnswer(updatedAnswer);
     }
 
     // If user has a different vote, update it
@@ -296,9 +297,9 @@ export class QAService {
         answer.downvotes += 1;
       }
 
-      const updatedVote = await this.answerVoteRepository.save(existingVote);
-      await this.answerRepository.save(answer);
-      return updatedVote;
+      await this.answerVoteRepository.save(existingVote);
+      const updatedAnswer = await this.answerRepository.save(answer);
+      return this.sanitizeAnswer(updatedAnswer);
     }
 
     // Create new vote
@@ -308,7 +309,7 @@ export class QAService {
       vote_type: dto.vote_type,
     });
 
-    const savedVote = await this.answerVoteRepository.save(vote);
+    await this.answerVoteRepository.save(vote);
 
     // Update answer vote counts
     if (dto.vote_type === VoteType.UPVOTE) {
@@ -316,9 +317,8 @@ export class QAService {
     } else {
       answer.downvotes += 1;
     }
-    await this.answerRepository.save(answer);
-
-    return savedVote;
+    const updatedAnswer = await this.answerRepository.save(answer);
+    return this.sanitizeAnswer(updatedAnswer);
   }
 
   /**
